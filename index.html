@@ -477,6 +477,7 @@ document.getElementById('uploadNoteBtn').onclick = async () => {
       external_id: external_id || null
     })
   });
+}
 
   const data = await res.json();
   if (data.status === 'ok') {
