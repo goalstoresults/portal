@@ -8,9 +8,6 @@
   <!-- Chart.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-  <!-- Your portal logic -->
-  <script src="portal.js" defer></script>
-
   <style>
     :root { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
     body { margin: 0; background: #f7f7f9; color: #1e1e1e; }
@@ -66,20 +63,17 @@
     let projectConfig = null;
     let activeTab = null;
 
-    // Bootstrap: load available projects (you can serve this from a worker)
+    // Bootstrap: load available projects
     async function fetchProjectsList() {
-      // Expecting the worker to return: [{ project:'nyfo', display_name:'NYFO Portal' }, ...]
       const res = await fetch(`${API_BASE}/projects_config`);
       if (!res.ok) throw new Error('Failed to load projects list');
       return res.json();
     }
 
-    // Fetch config for a selected project
     async function fetchProjectConfig(project) {
       const res = await fetch(`${API_BASE}/projects_config?project=${encodeURIComponent(project)}`);
       if (!res.ok) throw new Error('Failed to load project config');
       const data = await res.json();
-      // Expecting a single object: { project, display_name, enabled_tabs: ['1','2','3','4','5','6'] }
       return Array.isArray(data) ? data[0] : data;
     }
 
@@ -104,7 +98,7 @@
       };
     }
 
-    function renderTabs(enabledTabs) {
+    function renderTabs(enabledTabs = []) {
       const nav = document.getElementById('tabs');
       nav.innerHTML = '';
       enabledTabs.forEach(id => {
@@ -141,7 +135,7 @@
       }
     }
 
-    // --------- Tab renderers (placeholder wiring) ---------
+    // --------- Tab renderers ---------
 
     async function renderContacts() {
       const content = document.getElementById('content');
@@ -271,60 +265,59 @@
       await renderNotes(); // refresh
     }
 
-async function renderTasks(filter = 'open') {
-  const content = document.getElementById('content');
-  content.innerHTML = `<div class="card loader">Loading tasks...</div>`;
+    async function renderTasks(filter = 'open') {
+      const content = document.getElementById('content');
+      content.innerHTML = `<div class="card loader">Loading tasks...</div>`;
 
-  const res = await fetch(`${API_BASE}/tasks?project=${encodeURIComponent(activeProject)}&status=${filter}`);
-  if (!res.ok) {
-    content.innerHTML = `<div class="card">Error loading tasks</div>`;
-    return;
-  }
-  const rows = await res.json();
+      const res = await fetch(`${API_BASE}/tasks?project=${encodeURIComponent(activeProject)}&status=${filter}`);
+      if (!res.ok) {
+        content.innerHTML = `<div class="card">Error loading tasks</div>`;
+        return;
+      }
+      const rows = await res.json();
 
-  // Filter buttons
-  const filters = `
-    <div class="row" style="margin-bottom:12px;">
-      <button onclick="renderTasks('all')">All</button>
-      <button onclick="renderTasks('open')">Open</button>
-      <button onclick="renderTasks('completed')">Completed</button>
-      <button onclick="renderTasks('overdue')">Overdue</button>
-    </div>
-  `;
-
-  // Task cards
-  const list = rows.map(t => {
-    const overdue = t.status === 'open' && t.due_date && new Date(t.due_date) < new Date();
-    const statusBadge = overdue ? `<span style="color:red;">⚠️ Overdue</span>` : `<span class="muted">${t.status}</span>`;
-    const actionBtn = t.status === 'open'
-      ? `<button onclick="markTaskDone('${t.id}')">Mark done</button>`
-      : `<button onclick="reopenTask('${t.id}')">Reopen</button>`;
-
-    return `
-      <div class="card">
-        <strong>${t.description}</strong>
-        <div class="muted">
-          ${t.assigned_to ? 'Assigned: ' + t.assigned_to : 'Unassigned'}
-          ${t.due_date ? ' • Due: ' + t.due_date : ''}
+      // Filter buttons
+      const filters = `
+        <div class="row" style="margin-bottom:12px;">
+          <button onclick="renderTasks('all')">All</button>
+          <button onclick="renderTasks('open')">Open</button>
+          <button onclick="renderTasks('completed')">Completed</button>
+          <button onclick="renderTasks('overdue')">Overdue</button>
         </div>
-        <div class="row" style="margin-top:8px;">
-          ${statusBadge}
-          <span class="spacer"></span>
-          ${actionBtn}
-        </div>
-      </div>
-    `;
-  }).join('');
+      `;
 
-  content.innerHTML = filters + (list || `<div class="card">No tasks found.</div>`);
-}
+      // Task cards
+      const list = rows.map(t => {
+        const overdue = t.status === 'open' && t.due_date && new Date(t.due_date) < new Date();
+        const statusBadge = overdue ? `<span style="color:red;">⚠️ Overdue</span>` : `<span class="muted">${t.status}</span>`;
+        const actionBtn = t.status === 'open'
+          ? `<button onclick="markTaskDone('${t.id}')">Mark done</button>`
+          : `<button onclick="reopenTask('${t.id}')">Reopen</button>`;
 
-async function reopenTask(taskId) {
-  const res = await fetch(`${API_BASE}/tasks/${encodeURIComponent(taskId)}/reopen`, { method: 'POST' });
-  if (!res.ok) { alert('Failed to reopen task'); return; }
-  await renderTasks('open');
-}
+        return `
+          <div class="card">
+            <strong>${t.description}</strong>
+            <div class="muted">
+              ${t.assigned_to ? 'Assigned: ' + t.assigned_to : 'Unassigned'}
+              ${t.due_date ? ' • Due: ' + t.due_date : ''}
+            </div>
+            <div class="row" style="margin-top:8px;">
+              ${statusBadge}
+              <span class="spacer"></span>
+              ${actionBtn}
+            </div>
+          </div>
+        `;
+      }).join('');
 
+      content.innerHTML = filters + (list || `<div class="card">No tasks found.</div>`);
+    }
+
+    async function reopenTask(taskId) {
+      const res = await fetch(`${API_BASE}/tasks/${encodeURIComponent(taskId)}/reopen`, { method: 'POST' });
+      if (!res.ok) { alert('Failed to reopen task'); return; }
+      await renderTasks('open');
+    }
 
     async function markTaskDone(taskId) {
       const res = await fetch(`${API_BASE}/tasks/${encodeURIComponent(taskId)}/complete`, { method: 'POST' });
@@ -332,100 +325,98 @@ async function reopenTask(taskId) {
       await renderTasks();
     }
 
-async function renderLookups() {
-  const content = document.getElementById('content');
-  content.innerHTML = `<div class="card loader">Loading lookups...</div>`;
+    async function renderLookups() {
+      const content = document.getElementById('content');
+      content.innerHTML = `<div class="card loader">Loading lookups...</div>`;
 
-  const res = await fetch(`${API_BASE}/lookups?project=${encodeURIComponent(activeProject)}`);
-  if (!res.ok) {
-    content.innerHTML = `<div class="card">Error loading lookups</div>`;
-    return;
-  }
-  const rows = await res.json();
-
-  // Group by category
-  const grouped = {};
-  rows.forEach(l => {
-    grouped[l.category] = grouped[l.category] || [];
-    grouped[l.category].push(l);
-  });
-
-  // Render grouped lookups
-  const html = Object.keys(grouped).map(cat => {
-    const items = grouped[cat].map(l => `<li><strong>${l.key}</strong>: ${l.value}</li>`).join('');
-    return `
-      <div class="card">
-        <strong>${cat}</strong>
-        <ul>${items}</ul>
-      </div>
-    `;
-  }).join('');
-
-  content.innerHTML = html || `<div class="card">No lookups defined.</div>`;
-}
-
-
-async function renderDashboard() {
-  const content = document.getElementById('content');
-  content.innerHTML = `<div class="card loader">Loading dashboard...</div>`;
-
-  const res = await fetch(`${API_BASE}/dashboard?project=${encodeURIComponent(activeProject)}`);
-  if (!res.ok) {
-    content.innerHTML = `<div class="card">Error loading dashboard</div>`;
-    return;
-  }
-  const kpis = await res.json();
-
-  // KPI cards
-  const cards = `
-    <div class="card"><strong>Open tasks</strong><div>${kpis.open_tasks}</div></div>
-    <div class="card"><strong>Overdue tasks</strong><div>${kpis.overdue_tasks}</div></div>
-    <div class="card"><strong>Completed tasks (7d)</strong><div>${kpis.completed_tasks_7d}</div></div>
-    <div class="card"><strong>Total relationships</strong><div>${kpis.total_relationships}</div></div>
-    <div class="card"><strong>Notes added (7d)</strong><div>${kpis.notes_added_7d}</div></div>
-  `;
-
-  // Notes per contact chart (simple bar chart using canvas)
-  const chartId = 'notesChart';
-  const chartCanvas = `<canvas id="${chartId}" width="400" height="200"></canvas>`;
-
-  content.innerHTML = cards + `<div class="card"><strong>Notes per contact (7d)</strong>${chartCanvas}</div>`;
-
-  // Render chart
-  const ctx = document.getElementById(chartId).getContext('2d');
-  const labels = Object.keys(kpis.notes_per_contact_7d || {});
-  const data = Object.values(kpis.notes_per_contact_7d || {});
-  if (labels.length > 0) {
-    new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels,
-        datasets: [{
-          label: 'Notes',
-          data,
-          backgroundColor: '#84aef8'
-        }]
-      },
-      options: {
-        scales: {
-          y: { beginAtZero: true }
-        }
+      const res = await fetch(`${API_BASE}/lookups?project=${encodeURIComponent(activeProject)}`);
+      if (!res.ok) {
+        content.innerHTML = `<div class="card">Error loading lookups</div>`;
+        return;
       }
-    });
-  } else {
-    ctx.font = '14px sans-serif';
-    ctx.fillText('No notes in last 7 days', 20, 50);
-  }
-}
+      const rows = await res.json();
 
+      // Group by category
+      const grouped = {};
+      rows.forEach(l => {
+        grouped[l.category] = grouped[l.category] || [];
+        grouped[l.category].push(l);
+      });
+
+      // Render grouped lookups
+      const html = Object.keys(grouped).map(cat => {
+        const items = grouped[cat].map(l => `<li><strong>${l.key}</strong>: ${l.value}</li>`).join('');
+        return `
+          <div class="card">
+            <strong>${cat}</strong>
+            <ul>${items}</ul>
+          </div>
+        `;
+      }).join('');
+
+      content.innerHTML = html || `<div class="card">No lookups defined.</div>`;
+    }
+
+    async function renderDashboard() {
+      const content = document.getElementById('content');
+      content.innerHTML = `<div class="card loader">Loading dashboard...</div>`;
+
+      const res = await fetch(`${API_BASE}/dashboard?project=${encodeURIComponent(activeProject)}`);
+      if (!res.ok) {
+        content.innerHTML = `<div class="card">Error loading dashboard</div>`;
+        return;
+      }
+      const kpis = await res.json();
+
+      // KPI cards
+      const cards = `
+        <div class="card"><strong>Open tasks</strong><div>${kpis.open_tasks ?? 0}</div></div>
+        <div class="card"><strong>Overdue tasks</strong><div>${kpis.overdue_tasks ?? 0}</div></div>
+        <div class="card"><strong>Completed tasks (7d)</strong><div>${kpis.completed_tasks_7d ?? 0}</div></div>
+        <div class="card"><strong>Total relationships</strong><div>${kpis.total_relationships ?? 0}</div></div>
+        <div class="card"><strong>Notes added (7d)</strong><div>${kpis.notes_added_7d ?? 0}</div></div>
+      `;
+
+      // Notes per contact chart (simple bar chart using canvas)
+      const chartId = 'notesChart';
+      const chartCanvas = `<canvas id="${chartId}" width="400" height="200"></canvas>`;
+
+      content.innerHTML = cards + `<div class="card"><strong>Notes per contact (7d)</strong>${chartCanvas}</div>`;
+
+      // Render chart
+      const ctx = document.getElementById(chartId).getContext('2d');
+      const labels = Object.keys(kpis.notes_per_contact_7d || {});
+      const data = Object.values(kpis.notes_per_contact_7d || {});
+      if (labels.length > 0) {
+        new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels,
+            datasets: [{
+              label: 'Notes',
+              data,
+              backgroundColor: '#84aef8'
+            }]
+          },
+          options: {
+            scales: {
+              y: { beginAtZero: true }
+            }
+          }
+        });
+      } else {
+        ctx.font = '14px sans-serif';
+        ctx.fillText('No notes in last 7 days', 20, 50);
+      }
+    }
 
     async function initPortal(project) {
       activeProject = project;
       projectConfig = await fetchProjectConfig(project);
       setTitle(projectConfig.display_name);
-      renderTabs(projectConfig.enabled_tabs);
+      renderTabs(projectConfig.enabled_tabs || []);
       // Default to first enabled tab
-      const firstTab = projectConfig.enabled_tabs[0];
+      const firstTab = (projectConfig.enabled_tabs || [])[0] || '1';
       await loadTab(firstTab);
     }
 
@@ -442,4 +433,3 @@ async function renderDashboard() {
   </script>
 </body>
 </html>
-
