@@ -5,59 +5,93 @@
   <title>Client Portal</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
-    :root { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
-    body { margin: 0; background: #f7f7f9; color: #1e1e1e; }
-    header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: #fff; border-bottom: 1px solid #e5e5ea; }
-    #portal-title { font-size: 18px; font-weight: 600; }
-    #project-selector { padding: 6px 8px; }
+<style>
+  :root { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+  body { margin: 0; background: #f7f7f9; color: #1e1e1e; }
+  header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: #fff; border-bottom: 1px solid #e5e5ea; }
+  #portal-title { font-size: 18px; font-weight: 600; }
+  #project-selector { padding: 6px 8px; }
 
-    nav#tabs, nav#subtabs {
-      display: flex;
-      gap: 8px;
-      padding: 8px 16px;
-      background: #fff;
-      border-bottom: 1px solid #e5e5ea;
-    }
+  /* Top tabs styled as folder tabs */
+  nav#tabs {
+    display: flex;
+    gap: 4px;
+    padding: 0 16px;
+    background: #f7f7f9;
+    border-bottom: 2px solid #ccc;
+  }
 
-    nav#tabs button, nav#subtabs button {
-      padding: 8px 12px;
-      border-radius: 6px;
-      cursor: pointer;
-      border: none;
-      background: #2979ff;
-      color: #fff;
-      font-weight: 500;
-      transition: background 0.2s, box-shadow 0.2s;
-    }
-    nav#tabs button.active, nav#subtabs button.active {
-      outline: 2px solid #84aef8;
-      background: #1565c0;
-    }
-    nav#tabs button:hover, nav#subtabs button:hover {
-      background: #1565c0;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-    }
-    nav#subtabs button:disabled {
-      background: #90caf9;
-      color: #e0e0e0;
-      cursor: not-allowed;
-    }
+  nav#tabs button {
+    background: #e0e0e0;
+    color: #333;
+    border: 1px solid #ccc;
+    border-bottom: none; /* merge with content area */
+    border-radius: 6px 6px 0 0; /* rounded top corners */
+    padding: 10px 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
 
-    main#content { padding: 16px; }
-    .card { background: #fff; border: 1px solid #e5e5ea; border-radius: 8px; padding: 12px; margin-bottom: 12px; }
-    .muted { color: #666; }
-    .row { display: flex; align-items: center; gap: 8px; }
-    .spacer { flex: 1; }
-    .loader { font-size: 14px; color: #666; }
-    .hidden { display: none !important; }
-  </style>
+  nav#tabs button.active {
+    background: #fff; /* active tab looks like open folder */
+    color: #000;
+    border-bottom: 2px solid #fff; /* blend into content */
+  }
+
+  nav#tabs button:hover {
+    background: #f5f5f5;
+  }
+
+  /* Subtabs row under active folder */
+  nav#subtabs {
+    display: flex;
+    gap: 6px;
+    padding: 6px 16px;
+    background: #fff;
+    border-bottom: 1px solid #ddd;
+  }
+
+  nav#subtabs button {
+    background: #2979ff;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 6px 12px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  nav#subtabs button.active {
+    background: #1565c0;
+  }
+
+  nav#subtabs button:hover {
+    background: #1565c0;
+  }
+
+  nav#subtabs button:disabled {
+    background: #90caf9;
+    color: #e0e0e0;
+    cursor: not-allowed;
+  }
+
+  main#content { padding: 16px; }
+  .card { background: #fff; border: 1px solid #e5e5ea; border-radius: 8px; padding: 12px; margin-bottom: 12px; }
+  .muted { color: #666; }
+  .row { display: flex; align-items: center; gap: 8px; }
+  .spacer { flex: 1; }
+  .loader { font-size: 14px; color: #666; }
+  .hidden { display: none !important; }
+</style>
+
 </head>
 <body>
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.0.15</span>
+      <span class="muted" style="margin-left:12px;">v1.0.16</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
