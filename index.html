@@ -144,7 +144,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.0.20</span>
+      <span class="muted" style="margin-left:12px;">v1.0.21</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -496,39 +496,54 @@ async function renderNoteHistory() {
   const content = document.getElementById('content');
   content.innerHTML = `<div class="card loader">Loading Note History...</div>`;
 
-  // Call Supabase REST directly for nyfo_notes_history
-  const res = await fetch(`${API_BASE}/nyfo_notes_history?project=eq.${encodeURIComponent(activeProject)}&order=created_at.desc&limit=250`, {
-    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
-  });
+  try {
+    const res = await fetch(
+      `${API_BASE}/notes_history?project=eq.${encodeURIComponent(activeProject)}&order=created_at.desc&limit=250`,
+      {
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+      }
+    );
 
-  if (!res.ok) {
-    content.innerHTML = `<div class="card">Error loading notes history</div>`;
-    return;
-  }
+    if (!res.ok) {
+      const errText = await res.text();
+      content.innerHTML = `<div class="card">Error loading notes: ${errText}</div>`;
+      return;
+    }
 
-  const data = await res.json();
-  if (!Array.isArray(data) || data.length === 0) {
-    content.innerHTML = `<div class="card">No notes found.</div>`;
-    return;
-  }
+    const data = await res.json();
+    if (!Array.isArray(data) || data.length === 0) {
+      content.innerHTML = `<div class="card">No notes found.</div>`;
+      return;
+    }
 
-  const rows = data.map(n => `
-    <div class="card note-row" data-note-id="${n.id}">
-      <div class="row">
-        <strong>${n.subject || '(no subject)'}</strong>
-        <span class="spacer"></span>
-        <span class="muted">${n.note_date || ''}</span>
+    const rows = data.map(n => `
+      <div class="card note-row" data-note-id="${n.id}">
+        <div class="row">
+          <strong>${n.subject || '(no subject)'}</strong>
+          <span class="spacer"></span>
+          <span class="muted">${n.note_date || ''}</span>
+        </div>
+        <div class="muted">
+          From: ${n.from_name || ''} (${n.from_email || ''})
+          • Status: ${n.review_status || 'pending'}
+          • Needs Review: ${n.needs_review ? 'Yes' : 'No'}
+        </div>
+        <div style="margin-top:8px;">${n.summary || ''}</div>
+        <div class="row" style="margin-top:8px;">
+          <button class="primary" onclick="selectNote('${n.id}')">Select</button>
+        </div>
       </div>
-      <div class="muted">From: ${n.from_name || ''} (${n.from_email || ''}) • Status: ${n.review_status || 'pending'} • Needs Review: ${n.needs_review ? 'Yes' : 'No'}</div>
-      <div style="margin-top:8px;">${n.summary || ''}</div>
-      <div class="row" style="margin-top:8px;">
-        <button class="primary" onclick="selectNote('${n.id}')">Select</button>
-      </div>
-    </div>
-  `).join('');
+    `).join('');
 
-  content.innerHTML = rows;
+    content.innerHTML = rows;
+  } catch (err) {
+    content.innerHTML = `<div class="card">Error: ${err.message}</div>`;
+  }
 }
+
 
 
 function enableNoteReviewSubtabs() {
