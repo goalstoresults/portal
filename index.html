@@ -299,17 +299,59 @@
       `).join('') || `<div class="card">No lookups.</div>`;
     }
 
-    async function renderDashboard() {
-      const content = document.getElementById('content');
-      const res = await fetch(`${API_BASE}/dashboard?project=${encodeURIComponent(activeProject)}`);
-      if (!res.ok) throw new Error('Failed to load dashboard KPIs');
-      const kpis = await res.json();
-      content.innerHTML = `
-        <div class="card"><strong>Open tasks</strong><div>${kpis.open_tasks}</div></div>
-        <div class="card"><strong>New relationships (7d)</strong><div>${kpis.new_relationships_7d}</div></div>
-        <div class="card"><strong>Notes added (7d)</strong><div>${kpis.notes_added_7d}</div></div>
-      `;
-    }
+async function renderDashboard() {
+  const content = document.getElementById('content');
+  content.innerHTML = `<div class="card loader">Loading dashboard...</div>`;
+
+  const res = await fetch(`${API_BASE}/dashboard?project=${encodeURIComponent(activeProject)}`);
+  if (!res.ok) {
+    content.innerHTML = `<div class="card">Error loading dashboard</div>`;
+    return;
+  }
+  const kpis = await res.json();
+
+  // KPI cards
+  const cards = `
+    <div class="card"><strong>Open tasks</strong><div>${kpis.open_tasks}</div></div>
+    <div class="card"><strong>Overdue tasks</strong><div>${kpis.overdue_tasks}</div></div>
+    <div class="card"><strong>Completed tasks (7d)</strong><div>${kpis.completed_tasks_7d}</div></div>
+    <div class="card"><strong>Total relationships</strong><div>${kpis.total_relationships}</div></div>
+    <div class="card"><strong>Notes added (7d)</strong><div>${kpis.notes_added_7d}</div></div>
+  `;
+
+  // Notes per contact chart (simple bar chart using canvas)
+  const chartId = 'notesChart';
+  const chartCanvas = `<canvas id="${chartId}" width="400" height="200"></canvas>`;
+
+  content.innerHTML = cards + `<div class="card"><strong>Notes per contact (7d)</strong>${chartCanvas}</div>`;
+
+  // Render chart
+  const ctx = document.getElementById(chartId).getContext('2d');
+  const labels = Object.keys(kpis.notes_per_contact_7d || {});
+  const data = Object.values(kpis.notes_per_contact_7d || {});
+  if (labels.length > 0) {
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Notes',
+          data,
+          backgroundColor: '#84aef8'
+        }]
+      },
+      options: {
+        scales: {
+          y: { beginAtZero: true }
+        }
+      }
+    });
+  } else {
+    ctx.font = '14px sans-serif';
+    ctx.fillText('No notes in last 7 days', 20, 50);
+  }
+}
+
 
     async function initPortal(project) {
       activeProject = project;
