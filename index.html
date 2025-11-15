@@ -58,6 +58,33 @@ button.danger {
 button.danger:hover {
   background: #c62828;
 }
+/* Blue buttons (global) */
+button {
+  padding: 8px 14px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s;
+  background: #2979ff;
+  color: #fff;
+}
+button:hover { background: #1565c0; box-shadow: 0 2px 6px rgba(0,0,0,0.15); }
+button:disabled { background: #90caf9; color: #e0e0e0; cursor: not-allowed; }
+
+/* Subtabs bar */
+nav#subtabs {
+  display: flex;
+  gap: 8px;
+  padding: 8px 16px;
+  background: #fff;
+  border-bottom: 1px solid #e5e5ea;
+}
+nav#subtabs button.active {
+  outline: 2px solid #84aef8;
+  background: #2979ff;
+}
 
   </style>
 </head>
@@ -65,7 +92,7 @@ button.danger:hover {
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.0.12</span>
+      <span class="muted" style="margin-left:12px;">v1.0.13</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -74,6 +101,8 @@ button.danger:hover {
   </header>
 
   <nav id="tabs"></nav>
+  <nav id="subtabs" class="hidden"></nav>
+
   <main id="content"><div class="card"><p class="muted">Select a tab to start.</p></div></main>
 
   <script>
@@ -85,6 +114,17 @@ button.danger:hover {
       '5': 'Lookups',
       '6': 'Dashboard'
     };
+    const SUBTAB_NAMES = {
+  notes: [
+    { id: 'add', label: 'Add Note', disabled: false },
+    { id: 'history', label: 'Note History', disabled: false },
+    { id: 'review', label: 'Note Review', disabled: true },
+    { id: 'relationships', label: 'Note Relationships', disabled: true }
+  ]
+};
+let activeSubtab = null;
+let selectedNoteId = null;
+
 
     const API_BASE = 'https://client-portal-api.dennis-e64.workers.dev/api';
     let activeProject = null;
@@ -178,22 +218,37 @@ button.danger:hover {
       });
     }
 
-    async function loadTab(id) {
-      activeTab = id;
-      setActiveTabButton(id);
-      const content = document.getElementById('content');
-      content.innerHTML = `<div class="card loader">Loading ${TAB_NAMES[id]}...</div>`;
-      try {
-        if (id === '1') await renderContacts();
-        else if (id === '2') await renderRelationships();
-        else if (id === '3') await renderNotes();
-        else if (id === '4') await renderTasks();
-        else if (id === '5') await renderLookups();
-        else if (id === '6') await renderDashboard();
-      } catch (err) {
-        content.innerHTML = `<div class="card">Error: ${err.message}</div>`;
-      }
-    }
+async function loadTab(id) {
+  activeTab = id;
+  setActiveTabButton(id);
+
+  // NEW: handle subtabs
+  const subnav = document.getElementById('subtabs');
+  if (id === '3') { // Notes tab
+    renderSubtabs('notes');
+    subnav.classList.remove('hidden');
+  } else {
+    subnav.classList.add('hidden');
+    subnav.innerHTML = '';
+    activeSubtab = null;
+    selectedNoteId = null;
+  }
+
+  const content = document.getElementById('content');
+  content.innerHTML = `<div class="card loader">Loading ${TAB_NAMES[id]}...</div>`;
+
+  try {
+    if (id === '1') await renderContacts();
+    else if (id === '2') await renderRelationships();
+    else if (id === '3') await renderNotes(); // default landing for Notes
+    else if (id === '4') await renderTasks();
+    else if (id === '5') await renderLookups();
+    else if (id === '6') await renderDashboard();
+  } catch (err) {
+    content.innerHTML = `<div class="card">Error: ${err.message}</div>`;
+  }
+}
+
 
     // --------- Contacts with filter ---------
     async function renderContacts() {
@@ -303,53 +358,112 @@ button.danger:hover {
     // --------- Notes ---------
 async function renderNotes() {
   const content = document.getElementById('content');
+  content.innerHTML = `
+    <div class="card" style="margin-bottom:12px;">
+      <button onclick="loadSubtab('notes','add')">Add Note</button>
+      <button onclick="loadSubtab('notes','history')">Note History</button>
+      <button disabled>Note Review</button>
+      <button disabled>Note Relationships</button>
+    </div>
+    <div class="card muted">Choose an action above.</div>
+  `;
+}
 
+async function renderAddNoteForm() {
+  const content = document.getElementById('content');
   content.innerHTML = `
     <div class="card">
       <h3>Add Note <span class="muted">(Tech Admin Only)</span></h3>
       <div style="margin-bottom:12px;">
-        <label for="noteContent"><strong>Note / Email Content</strong></label><br />
-        <textarea id="noteContent" placeholder="Paste the full text here..." rows="10" style="width:100%;"></textarea>
+        <label><strong>Note / Email Content</strong></label><br />
+        <textarea id="noteContent" placeholder="Paste the full text here..." rows="12" style="width:100%;"></textarea>
       </div>
       <div style="margin-bottom:12px;">
-        <label for="externalId"><strong>External ID (optional)</strong></label><br />
+        <label><strong>External ID (optional)</strong></label><br />
         <input id="externalId" placeholder="e.g., Gmail ID, GHL note id" style="width:100%;" />
       </div>
-      <div class="row" style="margin-bottom:12px;">
+      <div class="row">
         <button id="uploadNoteBtn">Upload Note</button>
-        <button onclick="clearNoteForm()">Clear</button>
-        <span class="spacer"></span>
-        <button id="loadHistoryBtn">Load History</button>
+        <button id="clearNoteBtn">Clear</button>
       </div>
     </div>
-    <div id="notesGrid"></div>
   `;
 
-  // Upload Note logic
   document.getElementById('uploadNoteBtn').onclick = async () => {
-    const contentVal = document.getElementById('noteContent').value.trim();
-    const externalId = document.getElementById('externalId').value.trim();
-    const contactId = getSelectedContactId(); // Replace with your actual contact selector logic
-
-    if (!contentVal || !contactId) {
-      alert('Note content and contact ID are required.');
-      return;
-    }
+    const note_text = document.getElementById('noteContent').value.trim();
+    const external_id = document.getElementById('externalId').value.trim();
+    if (!note_text) { alert('Note content is required.'); return; }
 
     const res = await fetch(`${API_BASE}/add_note`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        project: activeProject,
-        contact_id: contactId,
-        content: contentVal,
-        external_id: externalId || null
-      })
+      body: JSON.stringify({ project: activeProject, content: note_text, external_id: external_id || null })
     });
-
     const data = await res.json();
-    alert(data.success ? 'Note uploaded!' : 'Failed to upload note');
+    alert(data.success ? 'Note uploaded!' : (data.error || 'Failed to upload note'));
   };
+
+  document.getElementById('clearNoteBtn').onclick = () => {
+    document.getElementById('noteContent').value = '';
+    document.getElementById('externalId').value = '';
+  };
+}
+
+async function renderNoteHistory() {
+  const content = document.getElementById('content');
+  content.innerHTML = `<div class="card loader">Loading Note History...</div>`;
+
+  const res = await fetch(`${API_BASE}/notes?project=${encodeURIComponent(activeProject)}&limit=250`);
+  const data = await res.json();
+  if (!data.success || !Array.isArray(data.notes)) {
+    content.innerHTML = `<div class="card">No notes found.</div>`;
+    return;
+  }
+
+  const rows = data.notes.map(n => `
+    <div class="card note-row" data-note-id="${n.id}">
+      <div class="row">
+        <strong>${n.subject || '(no subject)'}</strong>
+        <span class="spacer"></span>
+        <span class="muted">${n.created_at || ''}</span>
+      </div>
+      <div class="muted">From: ${n.from_name || ''} (${n.from_email || ''}) • Status: ${n.status || 'pending'} • Needs Review: ${n.needs_review ? 'Yes' : 'No'}</div>
+      <div style="margin-top:8px;">${n.note_text || ''}</div>
+      <div class="row" style="margin-top:8px;">
+        <button onclick="selectNote('${n.id}')">Select</button>
+      </div>
+    </div>
+  `).join('');
+
+  content.innerHTML = rows || `<div class="card">No notes found.</div>`;
+}
+
+window.selectNote = (id) => {
+  selectedNoteId = id;
+  enableNoteReviewSubtabs();
+};
+
+function enableNoteReviewSubtabs() {
+  // Enable review/relationships in the subtab bar
+  const reviewBtn = document.querySelector('#subtabs [data-subtab-id="review"]');
+  const relBtn = document.querySelector('#subtabs [data-subtab-id="relationships"]');
+  if (reviewBtn) reviewBtn.disabled = false;
+  if (relBtn) relBtn.disabled = false;
+}
+
+async function renderNoteReview() {
+  const content = document.getElementById('content');
+  if (!selectedNoteId) { content.innerHTML = `<div class="card">Select a note in history first.</div>`; return; }
+  content.innerHTML = `<div class="card">Review for note ${selectedNoteId} (wire to /api/note_review next).</div>`;
+}
+
+async function renderNoteRelationships() {
+  const content = document.getElementById('content');
+  if (!selectedNoteId) { content.innerHTML = `<div class="card">Select a note in history first.</div>`; return; }
+  content.innerHTML = `<div class="card">Relationships for note ${selectedNoteId} (wire to relationships UI next).</div>`;
+}
+    
+    
 
   // Clear form
   window.clearNoteForm = () => {
