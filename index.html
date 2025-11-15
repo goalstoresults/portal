@@ -11,9 +11,39 @@
     header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: #fff; border-bottom: 1px solid #e5e5ea; }
     #portal-title { font-size: 18px; font-weight: 600; }
     #project-selector { padding: 6px 8px; }
-    nav#tabs { display: flex; gap: 8px; padding: 8px 16px; background: #fff; border-bottom: 1px solid #e5e5ea; }
-    nav#tabs button { padding: 8px 12px; border: 1px solid #ddd; background: #fafafa; border-radius: 6px; cursor: pointer; }
-    nav#tabs button.active { background: #e9f2ff; border-color: #84aef8; }
+
+    nav#tabs, nav#subtabs {
+      display: flex;
+      gap: 8px;
+      padding: 8px 16px;
+      background: #fff;
+      border-bottom: 1px solid #e5e5ea;
+    }
+
+    nav#tabs button, nav#subtabs button {
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      border: none;
+      background: #2979ff;
+      color: #fff;
+      font-weight: 500;
+      transition: background 0.2s, box-shadow 0.2s;
+    }
+    nav#tabs button.active, nav#subtabs button.active {
+      outline: 2px solid #84aef8;
+      background: #1565c0;
+    }
+    nav#tabs button:hover, nav#subtabs button:hover {
+      background: #1565c0;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    }
+    nav#subtabs button:disabled {
+      background: #90caf9;
+      color: #e0e0e0;
+      cursor: not-allowed;
+    }
+
     main#content { padding: 16px; }
     .card { background: #fff; border: 1px solid #e5e5ea; border-radius: 8px; padding: 12px; margin-bottom: 12px; }
     .muted { color: #666; }
@@ -21,78 +51,13 @@
     .spacer { flex: 1; }
     .loader { font-size: 14px; color: #666; }
     .hidden { display: none !important; }
-    button {
-  padding: 8px 14px;
-  border: none;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.2s, box-shadow 0.2s;
-}
-
-/* Primary action (blue) */
-button.primary {
-  background: #2979ff;
-  color: #fff;
-}
-button.primary:hover {
-  background: #1565c0;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-}
-
-/* Secondary action (gray) */
-button.secondary {
-  background: #f1f3f4;
-  color: #333;
-}
-button.secondary:hover {
-  background: #e0e0e0;
-}
-
-/* Danger action (red) */
-button.danger {
-  background: #e53935;
-  color: #fff;
-}
-button.danger:hover {
-  background: #c62828;
-}
-/* Blue buttons (global) */
-button {
-  padding: 8px 14px;
-  border: none;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.2s, box-shadow 0.2s;
-  background: #2979ff;
-  color: #fff;
-}
-button:hover { background: #1565c0; box-shadow: 0 2px 6px rgba(0,0,0,0.15); }
-button:disabled { background: #90caf9; color: #e0e0e0; cursor: not-allowed; }
-
-/* Subtabs bar */
-nav#subtabs {
-  display: flex;
-  gap: 8px;
-  padding: 8px 16px;
-  background: #fff;
-  border-bottom: 1px solid #e5e5ea;
-}
-nav#subtabs button.active {
-  outline: 2px solid #84aef8;
-  background: #2979ff;
-}
-
   </style>
 </head>
 <body>
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.0.14</span>
+      <span class="muted" style="margin-left:12px;">v1.0.15</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -104,17 +69,17 @@ nav#subtabs button.active {
   <nav id="subtabs" class="hidden"></nav>
 
   <main id="content"><div class="card"><p class="muted">Select a tab to start.</p></div></main>
+<script>
+const TAB_NAMES = {
+  '1': 'Contacts',
+  '2': 'Relationships',
+  '3': 'Notes',
+  '4': 'Tasks',
+  '5': 'Lookups',
+  '6': 'Dashboard'
+};
 
-  <script>
-    const TAB_NAMES = {
-      '1': 'Contacts',
-      '2': 'Relationships',
-      '3': 'Notes',
-      '4': 'Tasks',
-      '5': 'Lookups',
-      '6': 'Dashboard'
-    };
-    const SUBTAB_NAMES = {
+const SUBTAB_NAMES = {
   notes: [
     { id: 'add', label: 'Add Note', disabled: false },
     { id: 'history', label: 'Note History', disabled: false },
@@ -122,15 +87,106 @@ nav#subtabs button.active {
     { id: 'relationships', label: 'Note Relationships', disabled: true }
   ]
 };
+
+let activeTab = null;
 let activeSubtab = null;
 let selectedNoteId = null;
+let activeProject = null;
+let projectConfig = null;
 
+const API_BASE = 'https://client-portal-api.dennis-e64.workers.dev/api';
 
-    const API_BASE = 'https://client-portal-api.dennis-e64.workers.dev/api';
-    let activeProject = null;
-    let projectConfig = null;
-    let activeTab = null;
+/* ---------- Bootstrapping ---------- */
+async function fetchProjectsList() {
+  const res = await fetch(`${API_BASE}/projects_config`);
+  if (!res.ok) throw new Error('Failed to load projects list');
+  return res.json();
+}
 
+async function fetchProjectConfig(project) {
+  const res = await fetch(`${API_BASE}/projects_config?project=${encodeURIComponent(project)}`);
+  if (!res.ok) throw new Error('Failed to load project config');
+  const data = await res.json();
+  return Array.isArray(data) ? data[0] : data;
+}
+
+function setTitle(displayName) {
+  const titleEl = document.getElementById('portal-title');
+  titleEl.textContent = displayName || 'Client Portal';
+  document.title = displayName || 'Client Portal';
+}
+
+function renderProjectSelector(projects, selected) {
+  const sel = document.getElementById('project-selector');
+  sel.innerHTML = '';
+  projects.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.project;
+    opt.textContent = p.display_name || p.project;
+    if (p.project === selected) opt.selected = true;
+    sel.appendChild(opt);
+  });
+  sel.onchange = async (e) => {
+    await initPortal(e.target.value);
+  };
+}
+
+async function initPortal(project) {
+  activeProject = project;
+  projectConfig = await fetchProjectConfig(project);
+  setTitle(projectConfig.display_name);
+  renderTabs(projectConfig.enabled_tabs || []);
+  const firstTab = (projectConfig.enabled_tabs || [])[0] || '1';
+  await loadTab(firstTab);
+}
+
+async function bootstrap() {
+  try {
+    const projects = await fetchProjectsList();
+    const urlParams = new URLSearchParams(window.location.search);
+    const projectParam = urlParams.get('project');
+    const selectorRow = document.getElementById('project-selector-row');
+
+    if (projectParam) {
+      if (selectorRow) selectorRow.classList.add('hidden');
+      activeProject = projectParam;
+      await initPortal(activeProject);
+    } else {
+      if (selectorRow) selectorRow.classList.remove('hidden');
+      const defaultProject = projects[0]?.project;
+      renderProjectSelector(projects, defaultProject);
+      await initPortal(defaultProject);
+    }
+  } catch (err) {
+    document.getElementById('content').innerHTML =
+      `<div class="card">Bootstrap error: ${err.message}</div>`;
+  }
+}
+
+document.addEventListener('DOMContentLoaded', bootstrap);
+
+/* ---------- Top tabs ---------- */
+function renderTabs(enabledTabs = []) {
+  const nav = document.getElementById('tabs');
+  nav.innerHTML = '';
+  enabledTabs.forEach(id => {
+    const btn = document.createElement('button');
+    btn.textContent = TAB_NAMES[id] || `Tab ${id}`;
+    btn.dataset.tabId = id;
+    btn.onclick = () => loadTab(id);
+    if (id === activeTab) btn.classList.add('active');
+    nav.appendChild(btn);
+  });
+}
+
+function setActiveTabButton(id) {
+  const nav = document.getElementById('tabs');
+  [...nav.querySelectorAll('button')].forEach(b => {
+    b.classList.toggle('active', b.dataset.tabId === id);
+  });
+}
+
+/* ---------- Subtabs ---------- */
 function renderSubtabs(tabKey) {
   const subnav = document.getElementById('subtabs');
   subnav.innerHTML = '';
@@ -152,115 +208,12 @@ function setActiveSubtabButton(id) {
   });
 }
 
-async function loadSubtab(tabKey, subId) {
-  activeSubtab = subId;
-  setActiveSubtabButton(subId);
-  if (tabKey === 'notes') {
-    if (subId === 'add') await renderAddNoteForm();
-    if (subId === 'history') await renderNoteHistory();
-    if (subId === 'review') await renderNoteReview();
-    if (subId === 'relationships') await renderNoteRelationships();
-  }
-}
-
-
-
-    
-
-    async function fetchProjectsList() {
-      const res = await fetch(`${API_BASE}/projects_config`);
-      if (!res.ok) throw new Error('Failed to load projects list');
-      return res.json();
-    }
-
-    async function fetchProjectConfig(project) {
-      const res = await fetch(`${API_BASE}/projects_config?project=${encodeURIComponent(project)}`);
-      if (!res.ok) throw new Error('Failed to load project config');
-      const data = await res.json();
-      return Array.isArray(data) ? data[0] : data;
-    }
-
-    function setTitle(displayName) {
-      const titleEl = document.getElementById('portal-title');
-      titleEl.textContent = displayName || 'Client Portal';
-      document.title = displayName || 'Client Portal';
-    }
-
-    function renderProjectSelector(projects, selected) {
-      const sel = document.getElementById('project-selector');
-      sel.innerHTML = '';
-      projects.forEach(p => {
-        const opt = document.createElement('option');
-        opt.value = p.project;
-        opt.textContent = p.display_name || p.project;
-        if (p.project === selected) opt.selected = true;
-        sel.appendChild(opt);
-      });
-      sel.onchange = async (e) => {
-        await initPortal(e.target.value);
-      };
-    }
-
-    async function initPortal(project) {
-      activeProject = project;
-      projectConfig = await fetchProjectConfig(project);
-      setTitle(projectConfig.display_name);
-      renderTabs(projectConfig.enabled_tabs || []);
-      const firstTab = (projectConfig.enabled_tabs || [])[0] || '1';
-      await loadTab(firstTab);
-    }
-
-    async function bootstrap() {
-      try {
-        const projects = await fetchProjectsList();
-        const urlParams = new URLSearchParams(window.location.search);
-        const projectParam = urlParams.get('project');
-        const selectorRow = document.getElementById('project-selector-row');
-
-        if (projectParam) {
-          if (selectorRow) selectorRow.classList.add('hidden');
-          activeProject = projectParam;
-          await initPortal(activeProject);
-        } else {
-          if (selectorRow) selectorRow.classList.remove('hidden');
-          const defaultProject = projects[0]?.project;
-          renderProjectSelector(projects, defaultProject);
-          await initPortal(defaultProject);
-        }
-      } catch (err) {
-        document.getElementById('content').innerHTML =
-          `<div class="card">Bootstrap error: ${err.message}</div>`;
-      }
-    }
-
-    document.addEventListener('DOMContentLoaded', bootstrap);
-    function renderTabs(enabledTabs = []) {
-      const nav = document.getElementById('tabs');
-      nav.innerHTML = '';
-      enabledTabs.forEach(id => {
-        const btn = document.createElement('button');
-        btn.textContent = TAB_NAMES[id] || `Tab ${id}`;
-        btn.dataset.tabId = id;
-        btn.onclick = () => loadTab(id);
-        if (id === activeTab) btn.classList.add('active');
-        nav.appendChild(btn);
-      });
-    }
-
-    function setActiveTabButton(id) {
-      const nav = document.getElementById('tabs');
-      [...nav.querySelectorAll('button')].forEach(b => {
-        b.classList.toggle('active', b.dataset.tabId === id);
-      });
-    }
-
 async function loadTab(id) {
   activeTab = id;
   setActiveTabButton(id);
 
-  // Handle subtabs
   const subnav = document.getElementById('subtabs');
-  if (id === '3') { // Notes tab
+  if (id === '3') {
     renderSubtabs('notes');
     subnav.classList.remove('hidden');
   } else {
@@ -274,9 +227,9 @@ async function loadTab(id) {
   content.innerHTML = `<div class="card loader">Loading ${TAB_NAMES[id]}...</div>`;
 
   try {
-    if (id === '1') await renderContacts();
+    if (id === '3') await renderNotes(); // landing
+    else if (id === '1') await renderContacts();
     else if (id === '2') await renderRelationships();
-    else if (id === '3') await renderNotes(); // Notes landing
     else if (id === '4') await renderTasks();
     else if (id === '5') await renderLookups();
     else if (id === '6') await renderDashboard();
@@ -285,120 +238,123 @@ async function loadTab(id) {
   }
 }
 
+async function loadSubtab(tabKey, subId) {
+  activeSubtab = subId;
+  setActiveSubtabButton(subId);
+  if (tabKey === 'notes') {
+    if (subId === 'add') await renderAddNoteForm();
+    if (subId === 'history') await renderNoteHistory();
+    if (subId === 'review') await renderNoteReview();
+    if (subId === 'relationships') await renderNoteRelationships();
+  }
+}
 
-    // --------- Contacts with filter ---------
-    async function renderContacts() {
-      const content = document.getElementById('content');
-
-      // Filter UI only — no auto-fetch
-      content.innerHTML = `
-        <div class="card" style="margin-bottom:12px;">
-          <div class="row" style="gap:12px;">
-            <input id="filter-first" placeholder="First name" />
-            <input id="filter-last" placeholder="Last name" />
-            <input id="filter-email" placeholder="Email" />
-            <button onclick="findContacts()">Find</button>
-          </div>
-        </div>
-        <div class="card">Enter criteria and click Find.</div>
-      `;
-    }
-
-    async function findContacts() {
-      const first = document.getElementById('filter-first').value.trim();
-      const last = document.getElementById('filter-last').value.trim();
-      const email = document.getElementById('filter-email').value.trim();
-
-      // Validation
-      if (email) {
-        if (email.length < 3) { alert('Email must be at least 3 characters.'); return; }
-      } else {
-        if (!first || !last) { alert('Both first and last name required.'); return; }
-        if (first.length < 3 || last.length < 3) { alert('Names must be at least 3 characters.'); return; }
-      }
-
-      // Build query string
-      let query = `project=${encodeURIComponent(activeProject)}`;
-      if (email) {
-        query += `&email=${encodeURIComponent(email)}`;
-      } else {
-        query += `&first_name=${encodeURIComponent(first)}&last_name=${encodeURIComponent(last)}`;
-      }
-
-      const content = document.getElementById('content');
-      content.innerHTML = `<div class="card loader">Searching contacts...</div>`;
-
-      const res = await fetch(`${API_BASE}/contacts?${query}`);
-      if (!res.ok) {
-        content.innerHTML = `<div class="card">Error searching contacts</div>`;
-        return;
-      }
-      const rows = await res.json();
-
-      const list = rows.map(r => `
-        <div class="card">
-          <div class="row">
-            <strong>${r.first_name || ''} ${r.last_name || ''}</strong>
-            <span class="spacer"></span>
-            <span class="muted">${r.email || ''}</span>
-          </div>
-          <div class="row">
-            <button onclick="openContact('${r.contact_id}')">Open</button>
-          </div>
-        </div>
-      `).join('');
-
-      // Re-render filter UI + results
-      renderContacts();
-      document.getElementById('content').innerHTML += list || `<div class="card">No contacts found.</div>`;
-    }
-
-    async function openContact(contactId) {
-      const content = document.getElementById('content');
-      content.innerHTML = `<div class="card loader">Loading contact...</div>`;
-      const [notesRes, relsRes, tasksRes] = await Promise.all([
-        fetch(`${API_BASE}/notes?project=${encodeURIComponent(activeProject)}&contact_id=${encodeURIComponent(contactId)}`),
-        fetch(`${API_BASE}/relationships?project=${encodeURIComponent(activeProject)}&contact_id=${encodeURIComponent(contactId)}`),
-        fetch(`${API_BASE}/tasks?project=${encodeURIComponent(activeProject)}&contact_id=${encodeURIComponent(contactId)}`)
-      ]);
-      if (!notesRes.ok || !relsRes.ok || !tasksRes.ok) throw new Error('Failed to load contact details');
-      const [notes, rels, tasks] = await Promise.all([notesRes.json(), relsRes.json(), tasksRes.json()]);
-      content.innerHTML = `
-        <div class="card">
-          <div class="row">
-            <strong>Contact</strong><span class="muted"> ${contactId}</span>
-            <span class="spacer"></span>
-            <button onclick="loadTab('1')">Back to Contacts</button>
-          </div>
-        </div>
-        <div class="card"><strong>Notes</strong><div class="muted">${notes.length} notes</div></div>
-        <div class="card"><strong>Relationships</strong><div class="muted">${rels.length} relationships</div></div>
-        <div class="card"><strong>Tasks</strong><div class="muted">${tasks.length} tasks</div></div>
-      `;
-    }
-
-    // --------- Relationships ---------
-    async function renderRelationships() {
-      const content = document.getElementById('content');
-      const res = await fetch(`${API_BASE}/relationships?project=${encodeURIComponent(activeProject)}`);
-      if (!res.ok) throw new Error('Failed to load relationships');
-      const rows = await res.json();
-      content.innerHTML = rows.map(r => `
-        <div class="card">
-          <strong>${r.source_contact_id}</strong> → <strong>${r.related_contact_id}</strong>
-          <span class="muted"> (${r.relationship_type || 'relationship'})</span>
-        </div>
-      `).join('') || `<div class="card">No relationships found.</div>`;
-    }
-
-    // --------- Notes ---------
-async function renderNotes() {
+/* ---------- Contacts ---------- */
+async function renderContacts() {
   const content = document.getElementById('content');
+
   content.innerHTML = `
-    <div class="card muted">Choose a subtab above (Add Note, Note History, etc.).</div>
+    <div class="card" style="margin-bottom:12px;">
+      <div class="row" style="gap:12px;">
+        <input id="filter-first" placeholder="First name" />
+        <input id="filter-last" placeholder="Last name" />
+        <input id="filter-email" placeholder="Email" />
+        <button onclick="findContacts()">Find</button>
+      </div>
+    </div>
+    <div class="card">Enter criteria and click Find.</div>
   `;
 }
 
+async function findContacts() {
+  const first = document.getElementById('filter-first').value.trim();
+  const last = document.getElementById('filter-last').value.trim();
+  const email = document.getElementById('filter-email').value.trim();
+
+  if (email) {
+    if (email.length < 3) { alert('Email must be at least 3 characters.'); return; }
+  } else {
+    if (!first || !last) { alert('Both first and last name required.'); return; }
+    if (first.length < 3 || last.length < 3) { alert('Names must be at least 3 characters.'); return; }
+  }
+
+  let query = `project=${encodeURIComponent(activeProject)}`;
+  if (email) {
+    query += `&email=${encodeURIComponent(email)}`;
+  } else {
+    query += `&first_name=${encodeURIComponent(first)}&last_name=${encodeURIComponent(last)}`;
+  }
+
+  const content = document.getElementById('content');
+  content.innerHTML = `<div class="card loader">Searching contacts...</div>`;
+
+  const res = await fetch(`${API_BASE}/contacts?${query}`);
+  if (!res.ok) {
+    content.innerHTML = `<div class="card">Error searching contacts</div>`;
+    return;
+  }
+  const rows = await res.json();
+
+  const list = rows.map(r => `
+    <div class="card">
+      <div class="row">
+        <strong>${r.first_name || ''} ${r.last_name || ''}</strong>
+        <span class="spacer"></span>
+        <span class="muted">${r.email || ''}</span>
+      </div>
+      <div class="row">
+        <button onclick="openContact('${r.contact_id}')">Open</button>
+      </div>
+    </div>
+  `).join('');
+
+  renderContacts();
+  document.getElementById('content').innerHTML += list || `<div class="card">No contacts found.</div>`;
+}
+
+async function openContact(contactId) {
+  const content = document.getElementById('content');
+  content.innerHTML = `<div class="card loader">Loading contact...</div>`;
+  const [notesRes, relsRes, tasksRes] = await Promise.all([
+    fetch(`${API_BASE}/notes?project=${encodeURIComponent(activeProject)}&contact_id=${encodeURIComponent(contactId)}`),
+    fetch(`${API_BASE}/relationships?project=${encodeURIComponent(activeProject)}&contact_id=${encodeURIComponent(contactId)}`),
+    fetch(`${API_BASE}/tasks?project=${encodeURIComponent(activeProject)}&contact_id=${encodeURIComponent(contactId)}`)
+  ]);
+  if (!notesRes.ok || !relsRes.ok || !tasksRes.ok) throw new Error('Failed to load contact details');
+  const [notes, rels, tasks] = await Promise.all([notesRes.json(), relsRes.json(), tasksRes.json()]);
+  content.innerHTML = `
+    <div class="card">
+      <div class="row">
+        <strong>Contact</strong><span class="muted"> ${contactId}</span>
+        <span class="spacer"></span>
+        <button onclick="loadTab('1')">Back to Contacts</button>
+      </div>
+    </div>
+    <div class="card"><strong>Notes</strong><div class="muted">${notes.length} notes</div></div>
+    <div class="card"><strong>Relationships</strong><div class="muted">${rels.length} relationships</div></div>
+    <div class="card"><strong>Tasks</strong><div class="muted">${tasks.length} tasks</div></div>
+  `;
+}
+
+/* ---------- Relationships ---------- */
+async function renderRelationships() {
+  const content = document.getElementById('content');
+  const res = await fetch(`${API_BASE}/relationships?project=${encodeURIComponent(activeProject)}`);
+  if (!res.ok) throw new Error('Failed to load relationships');
+  const rows = await res.json();
+  content.innerHTML = rows.map(r => `
+    <div class="card">
+      <strong>${r.source_contact_id}</strong> → <strong>${r.related_contact_id}</strong>
+      <span class="muted"> (${r.relationship_type || 'relationship'})</span>
+    </div>
+  `).join('') || `<div class="card">No relationships found.</div>`;
+}
+
+/* ---------- Notes ---------- */
+async function renderNotes() {
+  const content = document.getElementById('content');
+  content.innerHTML = `<div class="card muted">Choose a subtab above (Add Note, Note History, etc.).</div>`;
+}
 
 async function renderAddNoteForm() {
   const content = document.getElementById('content');
@@ -475,7 +431,6 @@ window.selectNote = (id) => {
 };
 
 function enableNoteReviewSubtabs() {
-  // Enable review/relationships in the subtab bar
   const reviewBtn = document.querySelector('#subtabs [data-subtab-id="review"]');
   const relBtn = document.querySelector('#subtabs [data-subtab-id="relationships"]');
   if (reviewBtn) reviewBtn.disabled = false;
@@ -493,256 +448,148 @@ async function renderNoteRelationships() {
   if (!selectedNoteId) { content.innerHTML = `<div class="card">Select a note in history first.</div>`; return; }
   content.innerHTML = `<div class="card">Relationships for note ${selectedNoteId} (wire to relationships UI next).</div>`;
 }
-    
-    
 
-  // Clear form
-  window.clearNoteForm = () => {
-    document.getElementById('noteContent').value = '';
-    document.getElementById('externalId').value = '';
-  };
+/* ---------- Tasks ---------- */
+async function renderTasks(filter = 'open') {
+  const content = document.getElementById('content');
+  content.innerHTML = `<div class="card loader">Loading tasks...</div>`;
 
-  // Load History logic
-  document.getElementById('loadHistoryBtn').onclick = async () => {
-    const res = await fetch(`${API_BASE}/notes?project=${encodeURIComponent(activeProject)}&limit=250`);
-    const data = await res.json();
-    const grid = document.getElementById('notesGrid');
+  const res = await fetch(`${API_BASE}/tasks?project=${encodeURIComponent(activeProject)}&status=${filter}`);
+  if (!res.ok) {
+    content.innerHTML = `<div class="card">Error loading tasks</div>`;
+    return;
+  }
+  const rows = await res.json();
 
-    if (!data.success || !Array.isArray(data.notes)) {
-      grid.innerHTML = `<div class="card">No notes found</div>`;
-      return;
-    }
+  const filters = `
+    <div class="row" style="margin-bottom:12px;">
+      <button onclick="renderTasks('all')">All</button>
+      <button onclick="renderTasks('open')">Open</button>
+      <button onclick="renderTasks('completed')">Completed</button>
+      <button onclick="renderTasks('overdue')">Overdue</button>
+    </div>
+  `;
 
-    grid.innerHTML = data.notes.map(n => `
+  const list = rows.map(t => {
+    const overdue = t.status === 'open' && t.due_date && new Date(t.due_date) < new Date();
+    const statusBadge = overdue ? `<span style="color:red;">⚠️ Overdue</span>` : `<span class="muted">${t.status}</span>`;
+    const actionBtn = t.status === 'open'
+      ? `<button onclick="markTaskDone('${t.id}')">Mark done</button>`
+      : `<button onclick="reopenTask('${t.id}')">Reopen</button>`;
+
+    return `
       <div class="card">
-        <strong>${n.subject || '(no subject)'}</strong>
-        <div class="muted">From: ${n.from_name || ''} (${n.from_email || ''})</div>
-        <div class="muted">Created: ${n.created_at || ''}</div>
-        <div>${n.note_text || ''}</div>
+        <strong>${t.description}</strong>
+        <div class="muted">
+          ${t.assigned_to ? 'Assigned: ' + t.assigned_to : 'Unassigned'}
+          ${t.due_date ? ' • Due: ' + t.due_date : ''}
+        </div>
         <div class="row" style="margin-top:8px;">
-          <span class="muted">Needs Review: ${n.needs_review ? 'Yes' : 'No'} • Status: ${n.status || 'unknown'}</span>
+          ${statusBadge}
           <span class="spacer"></span>
-          <button onclick="reviewNote('${n.id}')">Review</button>
+          ${actionBtn}
         </div>
       </div>
-    `).join('');
-  };
+    `;
+  }).join('');
+
+  content.innerHTML = filters + (list || `<div class="card">No tasks found.</div>`);
 }
 
+async function reopenTask(taskId) {
+  const res = await fetch(`${API_BASE}/tasks/${encodeURIComponent(taskId)}/reopen`, { method: 'POST' });
+  if (!res.ok) { alert('Failed to reopen task'); return; }
+  await renderTasks('open');
+}
 
-    
-    async function validateRelationship(proposedId) {
-      const res = await fetch(`${API_BASE}/validate/relationship`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: proposedId, project: activeProject })
-      });
-      if (!res.ok) { alert('Failed to validate relationship'); return; }
-      await renderNotes();
-    }
+async function markTaskDone(taskId) {
+  const res = await fetch(`${API_BASE}/tasks/${encodeURIComponent(taskId)}/complete`, { method: 'POST' });
+  if (!res.ok) { alert('Failed to complete task'); return; }
+  await renderTasks();
+}
 
-    async function validateTodo(proposedId) {
-      const res = await fetch(`${API_BASE}/validate/todo`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: proposedId, project: activeProject })
-      });
-      if (!res.ok) { alert('Failed to create task'); return; }
-      await renderNotes();
-    }
+/* ---------- Lookups ---------- */
+async function renderLookups() {
+  const content = document.getElementById('content');
+  content.innerHTML = `<div class="card loader">Loading lookups...</div>`;
 
-    // --------- Tasks ---------
-    async function renderTasks(filter = 'open') {
-      const content = document.getElementById('content');
-      content.innerHTML = `<div class="card loader">Loading tasks...</div>`;
+  const res = await fetch(`${API_BASE}/lookups?project=${encodeURIComponent(activeProject)}`);
+  if (!res.ok) {
+    content.innerHTML = `<div class="card">Error loading lookups</div>`;
+    return;
+  }
+  const rows = await res.json();
 
-      const res = await fetch(`${API_BASE}/tasks?project=${encodeURIComponent(activeProject)}&status=${filter}`);
-      if (!res.ok) {
-        content.innerHTML = `<div class="card">Error loading tasks</div>`;
-        return;
-      }
-      const rows = await res.json();
-
-      // Filter buttons
-      const filters = `
-        <div class="row" style="margin-bottom:12px;">
-          <button onclick="renderTasks('all')">All</button>
-          <button onclick="renderTasks('open')">Open</button>
-          <button onclick="renderTasks('completed')">Completed</button>
-          <button onclick="renderTasks('overdue')">Overdue</button>
-        </div>
-      `;
-
-      // Task cards
-      const list = rows.map(t => {
-        const overdue = t.status === 'open' && t.due_date && new Date(t.due_date) < new Date();
-        const statusBadge = overdue ? `<span style="color:red;">⚠️ Overdue</span>` : `<span class="muted">${t.status}</span>`;
-        const actionBtn = t.status === 'open'
-          ? `<button onclick="markTaskDone('${t.id}')">Mark done</button>`
-          : `<button onclick="reopenTask('${t.id}')">Reopen</button>`;
-
-        return `
-          <div class="card">
-            <strong>${t.description}</strong>
-            <div class="muted">
-              ${t.assigned_to ? 'Assigned: ' + t.assigned_to : 'Unassigned'}
-              ${t.due_date ? ' • Due: ' + t.due_date : ''}
-            </div>
-            <div class="row" style="margin-top:8px;">
-              ${statusBadge}
-              <span class="spacer"></span>
-              ${actionBtn}
-            </div>
-          </div>
-        `;
-      }).join('');
-
-      content.innerHTML = filters + (list || `<div class="card">No tasks found.</div>`);
-    }
-
-    async function reopenTask(taskId) {
-      const res = await fetch(`${API_BASE}/tasks/${encodeURIComponent(taskId)}/reopen`, { method: 'POST' });
-      if (!res.ok) { alert('Failed to reopen task'); return; }
-      await renderTasks('open');
-    }
-
-    async function markTaskDone(taskId) {
-      const res = await fetch(`${API_BASE}/tasks/${encodeURIComponent(taskId)}/complete`, { method: 'POST' });
-      if (!res.ok) { alert('Failed to complete task'); return; }
-      await renderTasks();
-    }
-
-    // --------- Lookups ---------
-    async function renderLookups() {
-      const content = document.getElementById('content');
-      content.innerHTML = `<div class="card loader">Loading lookups...</div>`;
-
-      const res = await fetch(`${API_BASE}/lookups?project=${encodeURIComponent(activeProject)}`);
-      if (!res.ok) {
-        content.innerHTML = `<div class="card">Error loading lookups</div>`;
-        return;
-      }
-      const rows = await res.json();
-
-      // Group by category
-      const grouped = {};
-      rows.forEach(l => {
-        grouped[l.category] = grouped[l.category] || [];
-        grouped[l.category].push(l);
-      });
-
-      // Render grouped lookups
-      const html = Object.keys(grouped).map(cat => {
-        const items = grouped[cat].map(l => `<li><strong>${l.key}</strong>: ${l.value}</li>`).join('');
-        return `
-          <div class="card">
-            <strong>${cat}</strong>
-            <ul>${items}</ul>
-          </div>
-        `;
-      }).join('');
-
-      content.innerHTML = html || `<div class="card">No lookups defined.</div>`;
-    }
-
-    // --------- Dashboard ---------
-    async function renderDashboard() {
-      const content = document.getElementById('content');
-      content.innerHTML = `<div class="card loader">Loading dashboard...</div>`;
-
-      const res = await fetch(`${API_BASE}/dashboard?project=${encodeURIComponent(activeProject)}`);
-      if (!res.ok) {
-        content.innerHTML = `<div class="card">Error loading dashboard</div>`;
-        return;
-      }
-      const kpis = await res.json();
-
-      // KPI cards
-      const cards = `
-        <div class="card"><strong>Open tasks</strong><div>${kpis.open_tasks ?? 0}</div></div>
-        <div class="card"><strong>Overdue tasks</strong><div>${kpis.overdue_tasks ?? 0}</div></div>
-        <div class="card"><strong>Completed tasks (7d)</strong><div>${kpis.completed_tasks_7d ?? 0}</div></div>
-        <div class="card"><strong>Total relationships</strong><div>${kpis.total_relationships ?? 0}</div></div>
-        <div class="card"><strong>Notes added (7d)</strong><div>${kpis.notes_added_7d ?? 0}</div></div>
-      `;
-
-      // Notes per contact chart
-      const chartId = 'notesChart';
-      const chartCanvas = `<canvas id="${chartId}" width="400" height="200"></canvas>`;
-
-      content.innerHTML = cards + `<div class="card"><strong>Notes per contact (7d)</strong>${chartCanvas}</div>`;
-
-      const ctx = document.getElementById(chartId).getContext('2d');
-      const labels = Object.keys(kpis.notes_per_contact_7d || {});
-      const data = Object.values(kpis.notes_per_contact_7d || {});
-      if (labels.length > 0) {
-        new Chart(ctx, {
-          type: 'bar',
-          data: {
-            labels,
-            datasets: [{
-              label: 'Notes',
-              data,
-              backgroundColor: '#84aef8'
-            }]
-          },
-          options: {
-            scales: {
-              y: { beginAtZero: true }
-            }
-          }
-        });
-      } else {
-        ctx.font = '14px sans-serif';
-        ctx.fillText('No notes in last 7 days', 20, 50);
-      }
-    }
-    async function validateRelationship(proposedId) {
-      const res = await fetch(`${API_BASE}/validate/relationship`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: proposedId, project: activeProject })
-      });
-      if (!res.ok) { alert('Failed to validate relationship'); return; }
-      await renderNotes();
-    }
-
-    async function validateTodo(proposedId) {
-      const res = await fetch(`${API_BASE}/validate/todo`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: proposedId, project: activeProject })
-      });
-      if (!res.ok) { alert('Failed to create task'); return; }
-      await renderNotes();
-    }
-
-    async function addNote(project, content) {
-  const res = await fetch('/api/notes', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ project, content })
+  const grouped = {};
+  rows.forEach(l => {
+    grouped[l.category] = grouped[l.category] || [];
+    grouped[l.category].push(l);
   });
-  const data = await res.json();
-  if (data.success) {
-    renderNote(data.note); // append to UI
-  } else {
-    alert('Failed to add note');
-  }
+
+  const html = Object.keys(grouped).map(cat => {
+    const items = grouped[cat].map(l => `<li><strong>${l.key}</strong>: ${l.value}</li>`).join('');
+    return `
+      <div class="card">
+        <strong>${cat}</strong>
+        <ul>${items}</ul>
+      </div>
+    `;
+  }).join('');
+
+  content.innerHTML = html || `<div class="card">No lookups defined.</div>`;
 }
 
-async function loadNotes(project) {
-  const res = await fetch(`/api/notes?project=${project}`);
-  const data = await res.json();
-  if (data.success) {
-    data.notes.forEach(renderNote);
+/* ---------- Dashboard ---------- */
+async function renderDashboard() {
+  const content = document.getElementById('content');
+  content.innerHTML = `<div class="card loader">Loading dashboard...</div>`;
+
+  const res = await fetch(`${API_BASE}/dashboard?project=${encodeURIComponent(activeProject)}`);
+  if (!res.ok) {
+    content.innerHTML = `<div class="card">Error loading dashboard</div>`;
+    return;
+  }
+  const kpis = await res.json();
+
+  const cards = `
+    <div class="card"><strong>Open tasks</strong><div>${kpis.open_tasks ?? 0}</div></div>
+    <div class="card"><strong>Overdue tasks</strong><div>${kpis.overdue_tasks ?? 0}</div></div>
+    <div class="card"><strong>Completed tasks (7d)</strong><div>${kpis.completed_tasks_7d ?? 0}</div></div>
+    <div class="card"><strong>Total relationships</strong><div>${kpis.total_relationships ?? 0}</div></div>
+    <div class="card"><strong>Notes added (7d)</strong><div>${kpis.notes_added_7d ?? 0}</div></div>
+  `;
+
+  const chartId = 'notesChart';
+  const chartCanvas = `<canvas id="${chartId}" width="400" height="200"></canvas>`;
+
+  content.innerHTML = cards + `<div class="card"><strong>Notes per contact (7d)</strong>${chartCanvas}</div>`;
+
+  const ctx = document.getElementById(chartId).getContext('2d');
+  const labels = Object.keys(kpis.notes_per_contact_7d || {});
+  const data = Object.values(kpis.notes_per_contact_7d || {});
+  if (labels.length > 0) {
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Notes',
+          data,
+          backgroundColor: '#84aef8'
+        }]
+      },
+      options: {
+        scales: {
+          y: { beginAtZero: true }
+        }
+      }
+    });
   } else {
-    content.innerHTML = `<div class="card">No notes found</div>`;
+    ctx.font = '14px sans-serif';
+    ctx.fillText('No notes in last 7 days', 20, 50);
   }
 }
-
-  </script>
+</script>
 </body>
 </html>
-
-      
+  
