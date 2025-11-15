@@ -25,8 +25,8 @@
     background: #e0e0e0;
     color: #333;
     border: 1px solid #ccc;
-    border-bottom: none; /* merge with content area */
-    border-radius: 6px 6px 0 0; /* rounded top corners */
+    border-bottom: none;
+    border-radius: 6px 6px 0 0;
     padding: 10px 16px;
     font-weight: 500;
     cursor: pointer;
@@ -34,9 +34,9 @@
   }
 
   nav#tabs button.active {
-    background: #fff; /* active tab looks like open folder */
+    background: #fff;
     color: #000;
-    border-bottom: 2px solid #fff; /* blend into content */
+    border-bottom: 2px solid #fff;
   }
 
   nav#tabs button:hover {
@@ -77,6 +77,58 @@
     cursor: not-allowed;
   }
 
+  /* Global button styles */
+  button {
+    padding: 8px 14px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s, box-shadow 0.2s;
+    background: #2979ff;
+    color: #fff;
+  }
+
+  button:hover {
+    background: #1565c0;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  }
+
+  button:disabled {
+    background: #90caf9;
+    color: #e0e0e0;
+    cursor: not-allowed;
+  }
+
+  button.primary {
+    background: #2979ff;
+    color: #fff;
+  }
+
+  button.primary:hover {
+    background: #1565c0;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  }
+
+  button.secondary {
+    background: #2196f3;
+    color: #fff;
+  }
+
+  button.secondary:hover {
+    background: #1976d2;
+  }
+
+  button.danger {
+    background: #e53935;
+    color: #fff;
+  }
+
+  button.danger:hover {
+    background: #c62828;
+  }
+
   main#content { padding: 16px; }
   .card { background: #fff; border: 1px solid #e5e5ea; border-radius: 8px; padding: 12px; margin-bottom: 12px; }
   .muted { color: #666; }
@@ -86,12 +138,13 @@
   .hidden { display: none !important; }
 </style>
 
+
 </head>
 <body>
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.0.17</span>
+      <span class="muted" style="margin-left:12px;">v1.0.18</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
