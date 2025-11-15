@@ -91,7 +91,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.0.16</span>
+      <span class="muted" style="margin-left:12px;">v1.0.17</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -293,7 +293,7 @@ async function renderContacts() {
         <input id="filter-first" placeholder="First name" />
         <input id="filter-last" placeholder="Last name" />
         <input id="filter-email" placeholder="Email" />
-        <button onclick="findContacts()">Find</button>
+        <button class="primary" onclick="findContacts()">Find</button>
       </div>
     </div>
     <div class="card">Enter criteria and click Find.</div>
@@ -404,8 +404,8 @@ async function renderAddNoteForm() {
         <input id="externalId" placeholder="e.g., Gmail ID, GHL note id" style="width:100%;" />
       </div>
       <div class="row">
-        <button id="uploadNoteBtn">Upload Note</button>
-        <button id="clearNoteBtn">Clear</button>
+        <button class="primary" id="uploadNoteBtn">Upload Note</button>
+        <button class="secondary" id="clearNoteBtn">Clear</button>
       </div>
     </div>
   `;
