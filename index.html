@@ -29,7 +29,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-    <span class="muted" style="margin-left:12px;">v1.0.3</span></div>
+    <span class="muted" style="margin-left:12px;">v1.0.4</span></div>
     <div class="row">
       <label for="project-selector" class="muted">Project</label>
       <select id="project-selector"></select>
@@ -420,7 +420,7 @@
       await loadTab(firstTab);
     }
 
-(async function bootstrap() {
+async function bootstrap() {
   try {
     const projects = await fetchProjectsList();
     const urlParams = new URLSearchParams(window.location.search);
@@ -431,13 +431,17 @@
       (projects.find(p => p.project === 'nyfo')?.project) ||
       projects[0]?.project;
 
-    if (!projectParam) {
-      // Show dropdown if no ?project=... in URL
-      renderProjectSelector(projects, defaultProject);
-      document.getElementById('project-selector-row').style.display = 'flex';
-    } else {
+    const selectorRow = document.getElementById('project-selector-row');
+
+    if (projectParam) {
       // Hide dropdown if ?project=... is present
-      document.getElementById('project-selector-row').style.display = 'none';
+      if (selectorRow) selectorRow.style.display = 'none';
+    } else {
+      // Show dropdown if no ?project=... in URL
+      if (selectorRow) {
+        selectorRow.style.display = 'flex';
+        renderProjectSelector(projects, defaultProject);
+      }
     }
 
     await initPortal(defaultProject);
@@ -445,7 +449,11 @@
     document.getElementById('content').innerHTML =
       `<div class="card">Bootstrap error: ${err.message}</div>`;
   }
-})();
+}
+
+// Run after DOM is ready
+document.addEventListener('DOMContentLoaded', bootstrap);
+
 
 
   </script>
