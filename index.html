@@ -332,18 +332,38 @@ async function reopenTask(taskId) {
       await renderTasks();
     }
 
-    async function renderLookups() {
-      const content = document.getElementById('content');
-      const res = await fetch(`${API_BASE}/lookups?project=${encodeURIComponent(activeProject)}`);
-      if (!res.ok) throw new Error('Failed to load lookups');
-      const rows = await res.json();
-      content.innerHTML = rows.map(l => `
-        <div class="card">
-          <strong>${l.key}</strong>: ${l.value}
-          <div class="muted">${l.category || ''}</div>
-        </div>
-      `).join('') || `<div class="card">No lookups.</div>`;
-    }
+async function renderLookups() {
+  const content = document.getElementById('content');
+  content.innerHTML = `<div class="card loader">Loading lookups...</div>`;
+
+  const res = await fetch(`${API_BASE}/lookups?project=${encodeURIComponent(activeProject)}`);
+  if (!res.ok) {
+    content.innerHTML = `<div class="card">Error loading lookups</div>`;
+    return;
+  }
+  const rows = await res.json();
+
+  // Group by category
+  const grouped = {};
+  rows.forEach(l => {
+    grouped[l.category] = grouped[l.category] || [];
+    grouped[l.category].push(l);
+  });
+
+  // Render grouped lookups
+  const html = Object.keys(grouped).map(cat => {
+    const items = grouped[cat].map(l => `<li><strong>${l.key}</strong>: ${l.value}</li>`).join('');
+    return `
+      <div class="card">
+        <strong>${cat}</strong>
+        <ul>${items}</ul>
+      </div>
+    `;
+  }).join('');
+
+  content.innerHTML = html || `<div class="card">No lookups defined.</div>`;
+}
+
 
 async function renderDashboard() {
   const content = document.getElementById('content');
