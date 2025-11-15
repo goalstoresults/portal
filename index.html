@@ -27,7 +27,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.0.9</span>
+      <span class="muted" style="margin-left:12px;">v1.0.10</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -263,56 +263,56 @@
     }
 
     // --------- Notes ---------
-    async function renderNotes() {
-      const content = document.getElementById('content');
-      const res = await fetch(`${API_BASE}/notes?project=${encodeURIComponent(activeProject)}`);
-      if (!res.ok) throw new Error('Failed to load notes');
-      const rows = await res.json();
+async function renderNotes() {
+  const content = document.getElementById('content');
 
-      const proposedRes = await fetch(`${API_BASE}/notes_proposals?project=${encodeURIComponent(activeProject)}`);
-      const proposed = proposedRes.ok ? await proposedRes.json() : [];
+  // Show UI only, no fetch yet
+  content.innerHTML = `
+    <div class="card" style="margin-bottom:12px;">
+      <button id="addNoteBtn">Add Note</button>
+      <button id="loadHistoryBtn">Load History</button>
+    </div>
+    <div id="notesArea" class="card">Click "Load History" to see notes.</div>
+  `;
 
-      const byNote = {};
-      proposed.forEach(p => {
-        byNote[p.note_id] = byNote[p.note_id] || { rels: [], todos: [] };
-        if (p.type === 'relationship') byNote[p.note_id].rels.push(p);
-        if (p.type === 'todo') byNote[p.note_id].todos.push(p);
+  // Wire up buttons
+  document.getElementById('addNoteBtn').onclick = () => {
+    // Show your Add Note form here
+    document.getElementById('notesArea').innerHTML = `
+      <textarea id="noteContent" placeholder="Enter note..."></textarea>
+      <button id="uploadNoteBtn">Upload Note</button>
+    `;
+    document.getElementById('uploadNoteBtn').onclick = async () => {
+      const contentVal = document.getElementById('noteContent').value;
+      const res = await fetch(`${API_BASE}/add_note`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ project: activeProject, contact_id: '123', content: contentVal })
       });
+      const data = await res.json();
+      alert(data.success ? 'Note added!' : 'Failed to add note');
+    };
+  };
 
-      content.innerHTML = rows.map(n => {
-        const props = byNote[n.id] || { rels: [], todos: [] };
-        const rels = props.rels.map(pr => `
-          <div class="row">
-            <span>Suggest: ${pr.source_contact_id} → ${pr.related_contact_id} (${pr.relationship_type})</span>
-            <span class="spacer"></span>
-            <button onclick="validateRelationship('${pr.id}')">Validate</button>
-          </div>
-        `).join('');
-        const todos = props.todos.map(pt => `
-          <div class="row">
-            <span>Todo: ${pt.description} ${pt.due_date ? '(due ' + pt.due_date + ')' : ''}</span>
-            <span class="spacer"></span>
-            <button onclick="validateTodo('${pt.id}')">Create task</button>
-          </div>
-        `).join('');
-        return `
-          <div class="card">
-            <strong>Note</strong>
-            <div>${n.note_text || ''}</div>
-            <div class="muted">Created: ${n.created_at || ''}</div>
-            <div style="margin-top:8px;">
-              <div><strong>Proposed relationships</strong></div>
-              ${rels || '<div class="muted">None</div>'}
-            </div>
-            <div style="margin-top:8px;">
-              <div><strong>Proposed todos</strong></div>
-              ${todos || '<div class="muted">None</div>'}
-            </div>
-          </div>
-        `;
-      }).join('') || `<div class="card">No notes found.</div>`;
+  document.getElementById('loadHistoryBtn').onclick = async () => {
+    const res = await fetch(`${API_BASE}/notes?project=${encodeURIComponent(activeProject)}&limit=250`);
+    const data = await res.json();
+    if (data.success) {
+      document.getElementById('notesArea').innerHTML = data.notes.map(n => `
+        <div class="card">
+          <strong>${n.subject || '(no subject)'}</strong>
+          <div class="muted">Created: ${n.created_at}</div>
+          <div>${n.note_text || ''}</div>
+        </div>
+      `).join('');
+    } else {
+      document.getElementById('notesArea').innerHTML = `<div class="card">No notes found</div>`;
     }
+  };
+}
 
+
+    
     async function validateRelationship(proposedId) {
       const res = await fetch(`${API_BASE}/validate/relationship`, {
         method: 'POST',
