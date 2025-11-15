@@ -4,7 +4,10 @@
   <meta charset="UTF-8" />
   <title>Client Portal</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  
+  <!-- Chart.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
   <style>
     :root { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
     body { margin: 0; background: #f7f7f9; color: #1e1e1e; }
@@ -20,25 +23,29 @@
     .row { display: flex; align-items: center; gap: 8px; }
     .spacer { flex: 1; }
     .loader { font-size: 14px; color: #666; }
-    .hidden { display: none !important; }
   </style>
 </head>
 <body>
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.0.6</span>
-    </div>
-    <div class="row" id="project-selector-row">
+    <span class="muted" style="margin-left:12px;">v1.0.5</span></div>
+    <div class="row">
       <label for="project-selector" class="muted">Project</label>
       <select id="project-selector"></select>
     </div>
   </header>
 
   <nav id="tabs"></nav>
-  <main id="content"><div class="card"><p class="muted">Select a tab to start.</p></div></main>
+
+  <main id="content">
+    <div class="card">
+      <p class="muted">Select a tab to start.</p>
+    </div>
+  </main>
 
   <script>
+    // Canonical tab order (IDs 1–6)
     const TAB_NAMES = {
       '1': 'Contacts',
       '2': 'Relationships',
@@ -48,11 +55,15 @@
       '6': 'Dashboard'
     };
 
+    // Worker API base (Cloudflare Worker should serve these routes)
     const API_BASE = 'https://client-portal-api.dennis-e64.workers.dev/api';
+
+    // Active state
     let activeProject = null;
     let projectConfig = null;
     let activeTab = null;
 
+    // Bootstrap: load available projects
     async function fetchProjectsList() {
       const res = await fetch(`${API_BASE}/projects_config`);
       if (!res.ok) throw new Error('Failed to load projects list');
@@ -87,39 +98,197 @@
       };
     }
 
-    async function initPortal(project) {
-      activeProject = project;
-      projectConfig = await fetchProjectConfig(project);
-      setTitle(projectConfig.display_name);
-      renderTabs(projectConfig.enabled_tabs || []);
-      const firstTab = (projectConfig.enabled_tabs || [])[0] || '1';
-      await loadTab(firstTab);
+    function renderTabs(enabledTabs = []) {
+      const nav = document.getElementById('tabs');
+      nav.innerHTML = '';
+      enabledTabs.forEach(id => {
+        const btn = document.createElement('button');
+        btn.textContent = TAB_NAMES[id] || `Tab ${id}`;
+        btn.dataset.tabId = id;
+        btn.onclick = () => loadTab(id);
+        if (id === activeTab) btn.classList.add('active');
+        nav.appendChild(btn);
+      });
     }
 
-    async function bootstrap() {
-      try {
-        const projects = await fetchProjectsList();
-        const urlParams = new URLSearchParams(window.location.search);
-        const projectParam = urlParams.get('project');
-        const selectorRow = document.getElementById('project-selector-row');
+    function setActiveTabButton(id) {
+      const nav = document.getElementById('tabs');
+      [...nav.querySelectorAll('button')].forEach(b => {
+        b.classList.toggle('active', b.dataset.tabId === id);
+      });
+    }
 
-        if (projectParam) {
-          if (selectorRow) selectorRow.classList.add('hidden');
-          activeProject = projectParam;
-          await initPortal(activeProject);
-        } else {
-          if (selectorRow) selectorRow.classList.remove('hidden');
-          const defaultProject = projects[0]?.project;
-          renderProjectSelector(projects, defaultProject);
-          await initPortal(defaultProject);
-        }
+    async function loadTab(id) {
+      activeTab = id;
+      setActiveTabButton(id);
+      const content = document.getElementById('content');
+      content.innerHTML = `<div class="card loader">Loading ${TAB_NAMES[id]}...</div>`;
+      try {
+        if (id === '1') await renderContacts();
+        else if (id === '2') await renderRelationships();
+        else if (id === '3') await renderNotes();
+        else if (id === '4') await renderTasks();
+        else if (id === '5') await renderLookups();
+        else if (id === '6') await renderDashboard();
       } catch (err) {
-        document.getElementById('content').innerHTML =
-          `<div class="card">Bootstrap error: ${err.message}</div>`;
+        content.innerHTML = `<div class="card">Error: ${err.message}</div>`;
       }
     }
 
-    document.addEventListener('DOMContentLoaded', bootstrap);
+    // --------- Tab renderers ---------
+
+    async function renderContacts() {
+      const content = document.getElementById('content');
+      const res = await fetch(`${API_BASE}/contacts?project=${encodeURIComponent(activeProject)}`);
+      if (!res.ok) throw new Error('Failed to load contacts');
+      const rows = await res.json();
+      const list = rows.map(r => `
+        <div class="card">
+          <div class="row">
+            <strong>${r.first_name || ''} ${r.last_name || ''}</strong>
+            <span class="spacer"></span>
+            <span class="muted">${r.email || ''}</span>
+          </div>
+          <div class="row">
+            <button onclick="openContact('${r.contact_id}')">Open</button>
+          </div>
+        </div>
+      `).join('');
+      content.innerHTML = list || `<div class="card">No contacts found.</div>`;
+    }
+
+    async function openContact(contactId) {
+      const content = document.getElementById('content');
+      content.innerHTML = `<div class="card loader">Loading contact...</div>`;
+      const [notesRes, relsRes, tasksRes] = await Promise.all([
+        fetch(`${API_BASE}/notes?project=${encodeURIComponent(activeProject)}&contact_id=${encodeURIComponent(contactId)}`),
+        fetch(`${API_BASE}/relationships?project=${encodeURIComponent(activeProject)}&contact_id=${encodeURIComponent(contactId)}`),
+        fetch(`${API_BASE}/tasks?project=${encodeURIComponent(activeProject)}&contact_id=${encodeURIComponent(contactId)}`)
+      ]);
+      if (!notesRes.ok || !relsRes.ok || !tasksRes.ok) throw new Error('Failed to load contact details');
+      const [notes, rels, tasks] = await Promise.all([notesRes.json(), relsRes.json(), tasksRes.json()]);
+      content.innerHTML = `
+        <div class="card">
+          <div class="row">
+            <strong>Contact</strong><span class="muted"> ${contactId}</span>
+            <span class="spacer"></span>
+            <button onclick="loadTab('1')">Back to Contacts</button>
+          </div>
+        </div>
+        <div class="card"><strong>Notes</strong><div class="muted">${notes.length} notes</div></div>
+        <div class="card"><strong>Relationships</strong><div class="muted">${rels.length} relationships</div></div>
+        <div class="card"><strong>Tasks</strong><div class="muted">${tasks.length} tasks</div></div>
+      `;
+    }
+
+    async function renderRelationships() {
+      const content = document.getElementById('content');
+      const res = await fetch(`${API_BASE}/relationships?project=${encodeURIComponent(activeProject)}`);
+      if (!res.ok) throw new Error('Failed to load relationships');
+      const rows = await res.json();
+      content.innerHTML = rows.map(r => `
+        <div class="card">
+          <strong>${r.source_contact_id}</strong> → <strong>${r.related_contact_id}</strong>
+          <span class="muted"> (${r.relationship_type || 'relationship'})</span>
+        </div>
+      `).join('') || `<div class="card">No relationships found.</div>`;
+    }
+
+    async function renderNotes() {
+      const content = document.getElementById('content');
+      const res = await fetch(`${API_BASE}/notes?project=${encodeURIComponent(activeProject)}`);
+      if (!res.ok) throw new Error('Failed to load notes');
+      const rows = await res.json();
+
+      // Fetch proposed items beneath each note (notes_relationships + notes_todos)
+      const proposedRes = await fetch(`${API_BASE}/notes_proposals?project=${encodeURIComponent(activeProject)}`);
+      const proposed = proposedRes.ok ? await proposedRes.json() : [];
+
+      const byNote = {};
+      proposed.forEach(p => {
+        byNote[p.note_id] = byNote[p.note_id] || { rels: [], todos: [] };
+        if (p.type === 'relationship') byNote[p.note_id].rels.push(p);
+        if (p.type === 'todo') byNote[p.note_id].todos.push(p);
+      });
+
+      content.innerHTML = rows.map(n => {
+        const props = byNote[n.id] || { rels: [], todos: [] };
+        const rels = props.rels.map(pr => `
+          <div class="row">
+            <span>Suggest: ${pr.source_contact_id} → ${pr.related_contact_id} (${pr.relationship_type})</span>
+            <span class="spacer"></span>
+            <button onclick="validateRelationship('${pr.id}')">Validate</button>
+          </div>
+        `).join('');
+        const todos = props.todos.map(pt => `
+          <div class="row">
+            <span>Todo: ${pt.description} ${pt.due_date ? '(due ' + pt.due_date + ')' : ''}</span>
+            <span class="spacer"></span>
+            <button onclick="validateTodo('${pt.id}')">Create task</button>
+          </div>
+        `).join('');
+        return `
+          <div class="card">
+            <strong>Note</strong>
+            <div>${n.note_text || ''}</div>
+            <div class="muted">Created: ${n.created_at || ''}</div>
+            <div style="margin-top:8px;">
+              <div><strong>Proposed relationships</strong></div>
+              ${rels || '<div class="muted">None</div>'}
+            </div>
+            <div style="margin-top:8px;">
+              <div><strong>Proposed todos</strong></div>
+              ${todos || '<div class="muted">None</div>'}
+            </div>
+          </div>
+        `;
+      }).join('') || `<div class="card">No notes found.</div>`;
+    }
+
+    async function validateRelationship(proposedId) {
+      const res = await fetch(`${API_BASE}/validate/relationship`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: proposedId, project: activeProject })
+      });
+      if (!res.ok) { alert('Failed to validate relationship'); return; }
+      await renderNotes(); // refresh notes list to reflect changes
+    }
+
+    async function validateTodo(proposedId) {
+      const res = await fetch(`${API_BASE}/validate/todo`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: proposedId, project: activeProject })
+      });
+      if (!res.ok) { alert('Failed to create task'); return; }
+      await renderNotes(); // refresh
+    }
+
+    async function renderTasks(filter = 'open') {
+      const content = document.getElementById('content');
+      content.innerHTML = `<div class="card loader">Loading tasks...</div>`;
+
+      const res = await fetch(`${API_BASE}/tasks?project=${encodeURIComponent(activeProject)}&status=${filter}`);
+      if (!res.ok) {
+        content.innerHTML = `<div class="card">Error loading tasks</div>`;
+        return;
+      }
+      const rows = await res.json();
+
+      // Filter buttons
+      const filters = `
+        <div class="row" style="margin-bottom:12px;">
+          <button onclick="renderTasks('all')">All</button>
+          <button onclick="renderTasks('open')">Open</button>
+          <button onclick="renderTasks('completed')">Completed</button>
+          <button onclick="renderTasks('overdue')">Overdue</button>
+        </div>
+      `;
+
+      // Task cards
+      const list = rows.map(t => {
+        const overdue = t.status === 'open' && t.due_date && new Date(t.due_date) < new Date();
         const statusBadge = overdue ? `<span style="color:red;">⚠️ Overdue</span>` : `<span class="muted">${t.status}</span>`;
         const actionBtn = t.status === 'open'
           ? `<button onclick="markTaskDone('${t.id}')">Mark done</button>`
@@ -167,12 +336,14 @@
       }
       const rows = await res.json();
 
+      // Group by category
       const grouped = {};
       rows.forEach(l => {
         grouped[l.category] = grouped[l.category] || [];
         grouped[l.category].push(l);
       });
 
+      // Render grouped lookups
       const html = Object.keys(grouped).map(cat => {
         const items = grouped[cat].map(l => `<li><strong>${l.key}</strong>: ${l.value}</li>`).join('');
         return `
@@ -197,6 +368,7 @@
       }
       const kpis = await res.json();
 
+      // KPI cards
       const cards = `
         <div class="card"><strong>Open tasks</strong><div>${kpis.open_tasks ?? 0}</div></div>
         <div class="card"><strong>Overdue tasks</strong><div>${kpis.overdue_tasks ?? 0}</div></div>
@@ -205,11 +377,13 @@
         <div class="card"><strong>Notes added (7d)</strong><div>${kpis.notes_added_7d ?? 0}</div></div>
       `;
 
+      // Notes per contact chart (simple bar chart using canvas)
       const chartId = 'notesChart';
       const chartCanvas = `<canvas id="${chartId}" width="400" height="200"></canvas>`;
 
       content.innerHTML = cards + `<div class="card"><strong>Notes per contact (7d)</strong>${chartCanvas}</div>`;
 
+      // Render chart
       const ctx = document.getElementById(chartId).getContext('2d');
       const labels = Object.keys(kpis.notes_per_contact_7d || {});
       const data = Object.values(kpis.notes_per_contact_7d || {});
@@ -235,6 +409,56 @@
         ctx.fillText('No notes in last 7 days', 20, 50);
       }
     }
+
+    async function initPortal(project) {
+      activeProject = project;
+      projectConfig = await fetchProjectConfig(project);
+      setTitle(projectConfig.display_name);
+      renderTabs(projectConfig.enabled_tabs || []);
+      // Default to first enabled tab
+      const firstTab = (projectConfig.enabled_tabs || [])[0] || '1';
+      await loadTab(firstTab);
+    }
+
+async function bootstrap() {
+  try {
+    const projects = await fetchProjectsList();
+    const urlParams = new URLSearchParams(window.location.search);
+    const projectParam = urlParams.get('project');
+
+    const selectorRow = document.getElementById('project-selector-row');
+
+    if (projectParam) {
+      // Hide label + dropdown entirely
+      if (selectorRow) selectorRow.style.display = 'none';
+
+      // Load only the project from the URL
+      activeProject = projectParam;
+      projectConfig = await fetchProjectConfig(activeProject);
+      setTitle(projectConfig.display_name);
+      renderTabs(projectConfig.enabled_tabs);
+      await loadTab(projectConfig.enabled_tabs[0]);
+    } else {
+      // Show label + dropdown and populate with all projects
+      if (selectorRow) selectorRow.style.display = 'flex';
+
+      const defaultProject = projects[0]?.project;
+      renderProjectSelector(projects, defaultProject);
+
+      activeProject = defaultProject;
+      projectConfig = await fetchProjectConfig(activeProject);
+      setTitle(projectConfig.display_name);
+      renderTabs(projectConfig.enabled_tabs);
+      await loadTab(projectConfig.enabled_tabs[0]);
+    }
+  } catch (err) {
+    document.getElementById('content').innerHTML =
+      `<div class="card">Bootstrap error: ${err.message}</div>`;
+  }
+}
+
+document.addEventListener('DOMContentLoaded', bootstrap);
+
   </script>
 </body>
 </html>
