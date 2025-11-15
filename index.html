@@ -4,10 +4,7 @@
   <meta charset="UTF-8" />
   <title>Client Portal</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  
-  <!-- Chart.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
   <style>
     :root { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
     body { margin: 0; background: #f7f7f9; color: #1e1e1e; }
@@ -23,29 +20,25 @@
     .row { display: flex; align-items: center; gap: 8px; }
     .spacer { flex: 1; }
     .loader { font-size: 14px; color: #666; }
+    .hidden { display: none !important; }
   </style>
 </head>
 <body>
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-    <span class="muted" style="margin-left:12px;">v1.0.5</span></div>
-    <div class="row">
+      <span class="muted" style="margin-left:12px;">v1.0.6</span>
+    </div>
+    <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
       <select id="project-selector"></select>
     </div>
   </header>
 
   <nav id="tabs"></nav>
-
-  <main id="content">
-    <div class="card">
-      <p class="muted">Select a tab to start.</p>
-    </div>
-  </main>
+  <main id="content"><div class="card"><p class="muted">Select a tab to start.</p></div></main>
 
   <script>
-    // Canonical tab order (IDs 1–6)
     const TAB_NAMES = {
       '1': 'Contacts',
       '2': 'Relationships',
@@ -55,15 +48,11 @@
       '6': 'Dashboard'
     };
 
-    // Worker API base (Cloudflare Worker should serve these routes)
     const API_BASE = 'https://client-portal-api.dennis-e64.workers.dev/api';
-
-    // Active state
     let activeProject = null;
     let projectConfig = null;
     let activeTab = null;
 
-    // Bootstrap: load available projects
     async function fetchProjectsList() {
       const res = await fetch(`${API_BASE}/projects_config`);
       if (!res.ok) throw new Error('Failed to load projects list');
@@ -98,6 +87,39 @@
       };
     }
 
+    async function initPortal(project) {
+      activeProject = project;
+      projectConfig = await fetchProjectConfig(project);
+      setTitle(projectConfig.display_name);
+      renderTabs(projectConfig.enabled_tabs || []);
+      const firstTab = (projectConfig.enabled_tabs || [])[0] || '1';
+      await loadTab(firstTab);
+    }
+
+    async function bootstrap() {
+      try {
+        const projects = await fetchProjectsList();
+        const urlParams = new URLSearchParams(window.location.search);
+        const projectParam = urlParams.get('project');
+        const selectorRow = document.getElementById('project-selector-row');
+
+        if (projectParam) {
+          if (selectorRow) selectorRow.classList.add('hidden');
+          activeProject = projectParam;
+          await initPortal(activeProject);
+        } else {
+          if (selectorRow) selectorRow.classList.remove('hidden');
+          const defaultProject = projects[0]?.project;
+          renderProjectSelector(projects, defaultProject);
+          await initPortal(defaultProject);
+        }
+      } catch (err) {
+        document.getElementById('content').innerHTML =
+          `<div class="card">Bootstrap error: ${err.message}</div>`;
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', bootstrap);
     function renderTabs(enabledTabs = []) {
       const nav = document.getElementById('tabs');
       nav.innerHTML = '';
@@ -200,7 +222,6 @@
       if (!res.ok) throw new Error('Failed to load notes');
       const rows = await res.json();
 
-      // Fetch proposed items beneath each note (notes_relationships + notes_todos)
       const proposedRes = await fetch(`${API_BASE}/notes_proposals?project=${encodeURIComponent(activeProject)}`);
       const proposed = proposedRes.ok ? await proposedRes.json() : [];
 
@@ -252,7 +273,7 @@
         body: JSON.stringify({ id: proposedId, project: activeProject })
       });
       if (!res.ok) { alert('Failed to validate relationship'); return; }
-      await renderNotes(); // refresh notes list to reflect changes
+      await renderNotes();
     }
 
     async function validateTodo(proposedId) {
@@ -262,9 +283,8 @@
         body: JSON.stringify({ id: proposedId, project: activeProject })
       });
       if (!res.ok) { alert('Failed to create task'); return; }
-      await renderNotes(); // refresh
+      await renderNotes();
     }
-
     async function renderTasks(filter = 'open') {
       const content = document.getElementById('content');
       content.innerHTML = `<div class="card loader">Loading tasks...</div>`;
@@ -377,13 +397,12 @@
         <div class="card"><strong>Notes added (7d)</strong><div>${kpis.notes_added_7d ?? 0}</div></div>
       `;
 
-      // Notes per contact chart (simple bar chart using canvas)
+      // Notes per contact chart
       const chartId = 'notesChart';
       const chartCanvas = `<canvas id="${chartId}" width="400" height="200"></canvas>`;
 
       content.innerHTML = cards + `<div class="card"><strong>Notes per contact (7d)</strong>${chartCanvas}</div>`;
 
-      // Render chart
       const ctx = document.getElementById(chartId).getContext('2d');
       const labels = Object.keys(kpis.notes_per_contact_7d || {});
       const data = Object.values(kpis.notes_per_contact_7d || {});
@@ -409,56 +428,6 @@
         ctx.fillText('No notes in last 7 days', 20, 50);
       }
     }
-
-    async function initPortal(project) {
-      activeProject = project;
-      projectConfig = await fetchProjectConfig(project);
-      setTitle(projectConfig.display_name);
-      renderTabs(projectConfig.enabled_tabs || []);
-      // Default to first enabled tab
-      const firstTab = (projectConfig.enabled_tabs || [])[0] || '1';
-      await loadTab(firstTab);
-    }
-
-async function bootstrap() {
-  try {
-    const projects = await fetchProjectsList();
-    const urlParams = new URLSearchParams(window.location.search);
-    const projectParam = urlParams.get('project');
-
-    const selectorRow = document.getElementById('project-selector-row');
-
-    if (projectParam) {
-      // Hide label + dropdown entirely
-      if (selectorRow) selectorRow.style.display = 'none';
-
-      // Load only the project from the URL
-      activeProject = projectParam;
-      projectConfig = await fetchProjectConfig(activeProject);
-      setTitle(projectConfig.display_name);
-      renderTabs(projectConfig.enabled_tabs);
-      await loadTab(projectConfig.enabled_tabs[0]);
-    } else {
-      // Show label + dropdown and populate with all projects
-      if (selectorRow) selectorRow.style.display = 'flex';
-
-      const defaultProject = projects[0]?.project;
-      renderProjectSelector(projects, defaultProject);
-
-      activeProject = defaultProject;
-      projectConfig = await fetchProjectConfig(activeProject);
-      setTitle(projectConfig.display_name);
-      renderTabs(projectConfig.enabled_tabs);
-      await loadTab(projectConfig.enabled_tabs[0]);
-    }
-  } catch (err) {
-    document.getElementById('content').innerHTML =
-      `<div class="card">Bootstrap error: ${err.message}</div>`;
-  }
-}
-
-document.addEventListener('DOMContentLoaded', bootstrap);
-
   </script>
 </body>
 </html>
