@@ -27,7 +27,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.0.6</span>
+      <span class="muted" style="margin-left:12px;">v1.0.7</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -157,13 +157,55 @@
       }
     }
 
-    // --------- Tab renderers ---------
-
+    // --------- Contacts with filter ---------
     async function renderContacts() {
       const content = document.getElementById('content');
-      const res = await fetch(`${API_BASE}/contacts?project=${encodeURIComponent(activeProject)}`);
-      if (!res.ok) throw new Error('Failed to load contacts');
+
+      // Filter UI only — no auto-fetch
+      content.innerHTML = `
+        <div class="card" style="margin-bottom:12px;">
+          <div class="row" style="gap:12px;">
+            <input id="filter-first" placeholder="First name" />
+            <input id="filter-last" placeholder="Last name" />
+            <input id="filter-email" placeholder="Email" />
+            <button onclick="findContacts()">Find</button>
+          </div>
+        </div>
+        <div class="card">Enter criteria and click Find.</div>
+      `;
+    }
+
+    async function findContacts() {
+      const first = document.getElementById('filter-first').value.trim();
+      const last = document.getElementById('filter-last').value.trim();
+      const email = document.getElementById('filter-email').value.trim();
+
+      // Validation
+      if (email) {
+        if (email.length < 3) { alert('Email must be at least 3 characters.'); return; }
+      } else {
+        if (!first || !last) { alert('Both first and last name required.'); return; }
+        if (first.length < 3 || last.length < 3) { alert('Names must be at least 3 characters.'); return; }
+      }
+
+      // Build query string
+      let query = `project=${encodeURIComponent(activeProject)}`;
+      if (email) {
+        query += `&email=${encodeURIComponent(email)}`;
+      } else {
+        query += `&first_name=${encodeURIComponent(first)}&last_name=${encodeURIComponent(last)}`;
+      }
+
+      const content = document.getElementById('content');
+      content.innerHTML = `<div class="card loader">Searching contacts...</div>`;
+
+      const res = await fetch(`${API_BASE}/contacts?${query}`);
+      if (!res.ok) {
+        content.innerHTML = `<div class="card">Error searching contacts</div>`;
+        return;
+      }
       const rows = await res.json();
+
       const list = rows.map(r => `
         <div class="card">
           <div class="row">
@@ -176,7 +218,10 @@
           </div>
         </div>
       `).join('');
-      content.innerHTML = list || `<div class="card">No contacts found.</div>`;
+
+      // Re-render filter UI + results
+      renderContacts();
+      document.getElementById('content').innerHTML += list || `<div class="card">No contacts found.</div>`;
     }
 
     async function openContact(contactId) {
@@ -203,6 +248,7 @@
       `;
     }
 
+    // --------- Relationships ---------
     async function renderRelationships() {
       const content = document.getElementById('content');
       const res = await fetch(`${API_BASE}/relationships?project=${encodeURIComponent(activeProject)}`);
@@ -216,6 +262,7 @@
       `).join('') || `<div class="card">No relationships found.</div>`;
     }
 
+    // --------- Notes ---------
     async function renderNotes() {
       const content = document.getElementById('content');
       const res = await fetch(`${API_BASE}/notes?project=${encodeURIComponent(activeProject)}`);
@@ -266,25 +313,8 @@
       }).join('') || `<div class="card">No notes found.</div>`;
     }
 
-    async function validateRelationship(proposedId) {
-      const res = await fetch(`${API_BASE}/validate/relationship`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: proposedId, project: activeProject })
-      });
-      if (!res.ok) { alert('Failed to validate relationship'); return; }
-      await renderNotes();
-    }
-
-    async function validateTodo(proposedId) {
-      const res = await fetch(`${API_BASE}/validate/todo`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: proposedId, project: activeProject })
-      });
-      if (!res.ok) { alert('Failed to create task'); return; }
-      await renderNotes();
-    }
+    async function validateRelationship
+          // --------- Tasks ---------
     async function renderTasks(filter = 'open') {
       const content = document.getElementById('content');
       content.innerHTML = `<div class="card loader">Loading tasks...</div>`;
@@ -345,6 +375,7 @@
       await renderTasks();
     }
 
+    // --------- Lookups ---------
     async function renderLookups() {
       const content = document.getElementById('content');
       content.innerHTML = `<div class="card loader">Loading lookups...</div>`;
@@ -377,6 +408,7 @@
       content.innerHTML = html || `<div class="card">No lookups defined.</div>`;
     }
 
+    // --------- Dashboard ---------
     async function renderDashboard() {
       const content = document.getElementById('content');
       content.innerHTML = `<div class="card loader">Loading dashboard...</div>`;
@@ -428,6 +460,27 @@
         ctx.fillText('No notes in last 7 days', 20, 50);
       }
     }
+    async function validateRelationship(proposedId) {
+      const res = await fetch(`${API_BASE}/validate/relationship`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: proposedId, project: activeProject })
+      });
+      if (!res.ok) { alert('Failed to validate relationship'); return; }
+      await renderNotes();
+    }
+
+    async function validateTodo(proposedId) {
+      const res = await fetch(`${API_BASE}/validate/todo`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: proposedId, project: activeProject })
+      });
+      if (!res.ok) { alert('Failed to create task'); return; }
+      await renderNotes();
+    }
   </script>
 </body>
 </html>
+
+      
