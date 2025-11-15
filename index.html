@@ -144,7 +144,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.0.19</span>
+      <span class="muted" style="margin-left:12px;">v1.0.20</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -496,35 +496,40 @@ async function renderNoteHistory() {
   const content = document.getElementById('content');
   content.innerHTML = `<div class="card loader">Loading Note History...</div>`;
 
-  const res = await fetch(`${API_BASE}/notes?project=${encodeURIComponent(activeProject)}&limit=250`);
+  // Call Supabase REST directly for nyfo_notes_history
+  const res = await fetch(`${API_BASE}/nyfo_notes_history?project=eq.${encodeURIComponent(activeProject)}&order=created_at.desc&limit=250`, {
+    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+  });
+
+  if (!res.ok) {
+    content.innerHTML = `<div class="card">Error loading notes history</div>`;
+    return;
+  }
+
   const data = await res.json();
-  if (!data.success || !Array.isArray(data.notes)) {
+  if (!Array.isArray(data) || data.length === 0) {
     content.innerHTML = `<div class="card">No notes found.</div>`;
     return;
   }
 
-  const rows = data.notes.map(n => `
+  const rows = data.map(n => `
     <div class="card note-row" data-note-id="${n.id}">
       <div class="row">
         <strong>${n.subject || '(no subject)'}</strong>
         <span class="spacer"></span>
-        <span class="muted">${n.created_at || ''}</span>
+        <span class="muted">${n.note_date || ''}</span>
       </div>
-      <div class="muted">From: ${n.from_name || ''} (${n.from_email || ''}) • Status: ${n.status || 'pending'} • Needs Review: ${n.needs_review ? 'Yes' : 'No'}</div>
-      <div style="margin-top:8px;">${n.note_text || ''}</div>
+      <div class="muted">From: ${n.from_name || ''} (${n.from_email || ''}) • Status: ${n.review_status || 'pending'} • Needs Review: ${n.needs_review ? 'Yes' : 'No'}</div>
+      <div style="margin-top:8px;">${n.summary || ''}</div>
       <div class="row" style="margin-top:8px;">
-        <button onclick="selectNote('${n.id}')">Select</button>
+        <button class="primary" onclick="selectNote('${n.id}')">Select</button>
       </div>
     </div>
   `).join('');
 
-  content.innerHTML = rows || `<div class="card">No notes found.</div>`;
+  content.innerHTML = rows;
 }
 
-window.selectNote = (id) => {
-  selectedNoteId = id;
-  enableNoteReviewSubtabs();
-};
 
 function enableNoteReviewSubtabs() {
   const reviewBtn = document.querySelector('#subtabs [data-subtab-id="review"]');
