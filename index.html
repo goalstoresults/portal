@@ -27,7 +27,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.0.10</span>
+      <span class="muted" style="margin-left:12px;">v1.0.11</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -266,48 +266,83 @@
 async function renderNotes() {
   const content = document.getElementById('content');
 
-  // Show UI only, no fetch yet
   content.innerHTML = `
-    <div class="card" style="margin-bottom:12px;">
-      <button id="addNoteBtn">Add Note</button>
-      <button id="loadHistoryBtn">Load History</button>
+    <div class="card">
+      <h3>Add Note <span class="muted">(Tech Admin Only)</span></h3>
+      <div style="margin-bottom:12px;">
+        <label for="noteContent"><strong>Note / Email Content</strong></label><br />
+        <textarea id="noteContent" placeholder="Paste the full text here..." rows="10" style="width:100%;"></textarea>
+      </div>
+      <div style="margin-bottom:12px;">
+        <label for="externalId"><strong>External ID (optional)</strong></label><br />
+        <input id="externalId" placeholder="e.g., Gmail ID, GHL note id" style="width:100%;" />
+      </div>
+      <div class="row" style="margin-bottom:12px;">
+        <button id="uploadNoteBtn">Upload Note</button>
+        <button onclick="clearNoteForm()">Clear</button>
+        <span class="spacer"></span>
+        <button id="loadHistoryBtn">Load History</button>
+      </div>
     </div>
-    <div id="notesArea" class="card">Click "Load History" to see notes.</div>
+    <div id="notesGrid"></div>
   `;
 
-  // Wire up buttons
-  document.getElementById('addNoteBtn').onclick = () => {
-    // Show your Add Note form here
-    document.getElementById('notesArea').innerHTML = `
-      <textarea id="noteContent" placeholder="Enter note..."></textarea>
-      <button id="uploadNoteBtn">Upload Note</button>
-    `;
-    document.getElementById('uploadNoteBtn').onclick = async () => {
-      const contentVal = document.getElementById('noteContent').value;
-      const res = await fetch(`${API_BASE}/add_note`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ project: activeProject, contact_id: '123', content: contentVal })
-      });
-      const data = await res.json();
-      alert(data.success ? 'Note added!' : 'Failed to add note');
-    };
+  // Upload Note logic
+  document.getElementById('uploadNoteBtn').onclick = async () => {
+    const contentVal = document.getElementById('noteContent').value.trim();
+    const externalId = document.getElementById('externalId').value.trim();
+    const contactId = getSelectedContactId(); // Replace with your actual contact selector logic
+
+    if (!contentVal || !contactId) {
+      alert('Note content and contact ID are required.');
+      return;
+    }
+
+    const res = await fetch(`${API_BASE}/add_note`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        project: activeProject,
+        contact_id: contactId,
+        content: contentVal,
+        external_id: externalId || null
+      })
+    });
+
+    const data = await res.json();
+    alert(data.success ? 'Note uploaded!' : 'Failed to upload note');
   };
 
+  // Clear form
+  window.clearNoteForm = () => {
+    document.getElementById('noteContent').value = '';
+    document.getElementById('externalId').value = '';
+  };
+
+  // Load History logic
   document.getElementById('loadHistoryBtn').onclick = async () => {
     const res = await fetch(`${API_BASE}/notes?project=${encodeURIComponent(activeProject)}&limit=250`);
     const data = await res.json();
-    if (data.success) {
-      document.getElementById('notesArea').innerHTML = data.notes.map(n => `
-        <div class="card">
-          <strong>${n.subject || '(no subject)'}</strong>
-          <div class="muted">Created: ${n.created_at}</div>
-          <div>${n.note_text || ''}</div>
-        </div>
-      `).join('');
-    } else {
-      document.getElementById('notesArea').innerHTML = `<div class="card">No notes found</div>`;
+    const grid = document.getElementById('notesGrid');
+
+    if (!data.success || !Array.isArray(data.notes)) {
+      grid.innerHTML = `<div class="card">No notes found</div>`;
+      return;
     }
+
+    grid.innerHTML = data.notes.map(n => `
+      <div class="card">
+        <strong>${n.subject || '(no subject)'}</strong>
+        <div class="muted">From: ${n.from_name || ''} (${n.from_email || ''})</div>
+        <div class="muted">Created: ${n.created_at || ''}</div>
+        <div>${n.note_text || ''}</div>
+        <div class="row" style="margin-top:8px;">
+          <span class="muted">Needs Review: ${n.needs_review ? 'Yes' : 'No'} • Status: ${n.status || 'unknown'}</span>
+          <span class="spacer"></span>
+          <button onclick="reviewNote('${n.id}')">Review</button>
+        </div>
+      </div>
+    `).join('');
   };
 }
 
