@@ -92,7 +92,7 @@ nav#subtabs button.active {
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.0.13</span>
+      <span class="muted" style="margin-left:12px;">v1.0.14</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -130,6 +130,42 @@ let selectedNoteId = null;
     let activeProject = null;
     let projectConfig = null;
     let activeTab = null;
+
+function renderSubtabs(tabKey) {
+  const subnav = document.getElementById('subtabs');
+  subnav.innerHTML = '';
+  SUBTAB_NAMES[tabKey].forEach(st => {
+    const btn = document.createElement('button');
+    btn.textContent = st.label;
+    btn.dataset.subtabId = st.id;
+    btn.disabled = !!st.disabled;
+    btn.classList.toggle('active', activeSubtab === st.id);
+    btn.onclick = () => loadSubtab(tabKey, st.id);
+    subnav.appendChild(btn);
+  });
+}
+
+function setActiveSubtabButton(id) {
+  const subnav = document.getElementById('subtabs');
+  [...subnav.querySelectorAll('button')].forEach(b => {
+    b.classList.toggle('active', b.dataset.subtabId === id);
+  });
+}
+
+async function loadSubtab(tabKey, subId) {
+  activeSubtab = subId;
+  setActiveSubtabButton(subId);
+  if (tabKey === 'notes') {
+    if (subId === 'add') await renderAddNoteForm();
+    if (subId === 'history') await renderNoteHistory();
+    if (subId === 'review') await renderNoteReview();
+    if (subId === 'relationships') await renderNoteRelationships();
+  }
+}
+
+
+
+    
 
     async function fetchProjectsList() {
       const res = await fetch(`${API_BASE}/projects_config`);
@@ -222,7 +258,7 @@ async function loadTab(id) {
   activeTab = id;
   setActiveTabButton(id);
 
-  // NEW: handle subtabs
+  // Handle subtabs
   const subnav = document.getElementById('subtabs');
   if (id === '3') { // Notes tab
     renderSubtabs('notes');
@@ -240,7 +276,7 @@ async function loadTab(id) {
   try {
     if (id === '1') await renderContacts();
     else if (id === '2') await renderRelationships();
-    else if (id === '3') await renderNotes(); // default landing for Notes
+    else if (id === '3') await renderNotes(); // Notes landing
     else if (id === '4') await renderTasks();
     else if (id === '5') await renderLookups();
     else if (id === '6') await renderDashboard();
@@ -359,15 +395,10 @@ async function loadTab(id) {
 async function renderNotes() {
   const content = document.getElementById('content');
   content.innerHTML = `
-    <div class="card" style="margin-bottom:12px;">
-      <button onclick="loadSubtab('notes','add')">Add Note</button>
-      <button onclick="loadSubtab('notes','history')">Note History</button>
-      <button disabled>Note Review</button>
-      <button disabled>Note Relationships</button>
-    </div>
-    <div class="card muted">Choose an action above.</div>
+    <div class="card muted">Choose a subtab above (Add Note, Note History, etc.).</div>
   `;
 }
+
 
 async function renderAddNoteForm() {
   const content = document.getElementById('content');
