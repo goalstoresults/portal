@@ -29,7 +29,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-    <span class="muted" style="margin-left:12px;">v1.0.0</span></div>
+    <span class="muted" style="margin-left:12px;">v1.0.1</span></div>
     <div class="row">
       <label for="project-selector" class="muted">Project</label>
       <select id="project-selector"></select>
@@ -56,7 +56,7 @@
     };
 
     // Worker API base (Cloudflare Worker should serve these routes)
-    const API_BASE = 'https://client-portal-api.dennis-e64.workers.dev';
+    const API_BASE = 'https://client-portal-api.dennis-e64.workers.dev/api';
 
     // Active state
     let activeProject = null;
