@@ -313,8 +313,27 @@
       }).join('') || `<div class="card">No notes found.</div>`;
     }
 
-    async function validateRelationship
-          // --------- Tasks ---------
+    async function validateRelationship(proposedId) {
+      const res = await fetch(`${API_BASE}/validate/relationship`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: proposedId, project: activeProject })
+      });
+      if (!res.ok) { alert('Failed to validate relationship'); return; }
+      await renderNotes();
+    }
+
+    async function validateTodo(proposedId) {
+      const res = await fetch(`${API_BASE}/validate/todo`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: proposedId, project: activeProject })
+      });
+      if (!res.ok) { alert('Failed to create task'); return; }
+      await renderNotes();
+    }
+
+    // --------- Tasks ---------
     async function renderTasks(filter = 'open') {
       const content = document.getElementById('content');
       content.innerHTML = `<div class="card loader">Loading tasks...</div>`;
