@@ -29,7 +29,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-    <span class="muted" style="margin-left:12px;">v1.0.2</span></div>
+    <span class="muted" style="margin-left:12px;">v1.0.3</span></div>
     <div class="row">
       <label for="project-selector" class="muted">Project</label>
       <select id="project-selector"></select>
@@ -423,22 +423,30 @@
 (async function bootstrap() {
   try {
     const projects = await fetchProjectsList();
-
-    // Look for ?project=... in the URL
     const urlParams = new URLSearchParams(window.location.search);
     const projectParam = urlParams.get('project');
 
-    // If ?project=nyfo is present, use it; otherwise fall back
-    const defaultProject = projectParam 
-      || (projects.find(p => p.project === 'nyfo')?.project) 
-      || projects[0]?.project;
+    const defaultProject =
+      projectParam ||
+      (projects.find(p => p.project === 'nyfo')?.project) ||
+      projects[0]?.project;
 
-    renderProjectSelector(projects, defaultProject);
+    if (!projectParam) {
+      // Show dropdown if no ?project=... in URL
+      renderProjectSelector(projects, defaultProject);
+      document.getElementById('project-selector-row').style.display = 'flex';
+    } else {
+      // Hide dropdown if ?project=... is present
+      document.getElementById('project-selector-row').style.display = 'none';
+    }
+
     await initPortal(defaultProject);
   } catch (err) {
-    document.getElementById('content').innerHTML = `<div class="card">Bootstrap error: ${err.message}</div>`;
+    document.getElementById('content').innerHTML =
+      `<div class="card">Bootstrap error: ${err.message}</div>`;
   }
 })();
+
 
   </script>
 </body>
