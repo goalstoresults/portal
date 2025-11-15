@@ -271,21 +271,60 @@
       await renderNotes(); // refresh
     }
 
-    async function renderTasks() {
-      const content = document.getElementById('content');
-      const res = await fetch(`${API_BASE}/tasks?project=${encodeURIComponent(activeProject)}&status=open`);
-      if (!res.ok) throw new Error('Failed to load tasks');
-      const rows = await res.json();
-      content.innerHTML = rows.map(t => `
-        <div class="card">
-          <strong>${t.description}</strong>
-          <div class="muted">${t.assigned_to ? ('Assigned: ' + t.assigned_to) : 'Unassigned'} ${t.due_date ? (' • Due: ' + t.due_date) : ''}</div>
-          <div class="row" style="margin-top:8px;">
-            <button onclick="markTaskDone('${t.id}')">Mark done</button>
-          </div>
+async function renderTasks(filter = 'open') {
+  const content = document.getElementById('content');
+  content.innerHTML = `<div class="card loader">Loading tasks...</div>`;
+
+  const res = await fetch(`${API_BASE}/tasks?project=${encodeURIComponent(activeProject)}&status=${filter}`);
+  if (!res.ok) {
+    content.innerHTML = `<div class="card">Error loading tasks</div>`;
+    return;
+  }
+  const rows = await res.json();
+
+  // Filter buttons
+  const filters = `
+    <div class="row" style="margin-bottom:12px;">
+      <button onclick="renderTasks('all')">All</button>
+      <button onclick="renderTasks('open')">Open</button>
+      <button onclick="renderTasks('completed')">Completed</button>
+      <button onclick="renderTasks('overdue')">Overdue</button>
+    </div>
+  `;
+
+  // Task cards
+  const list = rows.map(t => {
+    const overdue = t.status === 'open' && t.due_date && new Date(t.due_date) < new Date();
+    const statusBadge = overdue ? `<span style="color:red;">⚠️ Overdue</span>` : `<span class="muted">${t.status}</span>`;
+    const actionBtn = t.status === 'open'
+      ? `<button onclick="markTaskDone('${t.id}')">Mark done</button>`
+      : `<button onclick="reopenTask('${t.id}')">Reopen</button>`;
+
+    return `
+      <div class="card">
+        <strong>${t.description}</strong>
+        <div class="muted">
+          ${t.assigned_to ? 'Assigned: ' + t.assigned_to : 'Unassigned'}
+          ${t.due_date ? ' • Due: ' + t.due_date : ''}
         </div>
-      `).join('') || `<div class="card">No open tasks.</div>`;
-    }
+        <div class="row" style="margin-top:8px;">
+          ${statusBadge}
+          <span class="spacer"></span>
+          ${actionBtn}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  content.innerHTML = filters + (list || `<div class="card">No tasks found.</div>`);
+}
+
+async function reopenTask(taskId) {
+  const res = await fetch(`${API_BASE}/tasks/${encodeURIComponent(taskId)}/reopen`, { method: 'POST' });
+  if (!res.ok) { alert('Failed to reopen task'); return; }
+  await renderTasks('open');
+}
+
 
     async function markTaskDone(taskId) {
       const res = await fetch(`${API_BASE}/tasks/${encodeURIComponent(taskId)}/complete`, { method: 'POST' });
