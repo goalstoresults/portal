@@ -21,13 +21,51 @@
     .spacer { flex: 1; }
     .loader { font-size: 14px; color: #666; }
     .hidden { display: none !important; }
+    button {
+  padding: 8px 14px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+
+/* Primary action (blue) */
+button.primary {
+  background: #2979ff;
+  color: #fff;
+}
+button.primary:hover {
+  background: #1565c0;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+/* Secondary action (gray) */
+button.secondary {
+  background: #f1f3f4;
+  color: #333;
+}
+button.secondary:hover {
+  background: #e0e0e0;
+}
+
+/* Danger action (red) */
+button.danger {
+  background: #e53935;
+  color: #fff;
+}
+button.danger:hover {
+  background: #c62828;
+}
+
   </style>
 </head>
 <body>
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.0.11</span>
+      <span class="muted" style="margin-left:12px;">v1.0.12</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
