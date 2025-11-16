@@ -144,7 +144,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.0.24</span>
+      <span class="muted" style="margin-left:12px;">v1.0.22</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -181,19 +181,7 @@ let selectedNoteId = null;
 let activeProject = null;
 let projectConfig = null;
 
-
-  // Base URL for your Worker API
-  const API_BASE = "https://client-portal-api.dennis-e64.workers.dev/api";
-
-  // Extract project from URL or default to "gtr"
-  //const urlParams = new URLSearchParams(window.location.search);
-  //const activeProject = urlParams.get("project") || "gtr";
-
-  // Auto-load history when the page is ready
-  //window.addEventListener("DOMContentLoaded", () => {
-  //  renderNoteHistory();
-  });
-
+const API_BASE = 'https://client-portal-api.dennis-e64.workers.dev/api';
 
 
 /* ---------- Bootstrapping ---------- */
@@ -707,4 +695,5 @@ async function renderDashboard() {
 </script>
 </body>
 </html>
+  
   
