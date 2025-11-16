@@ -181,7 +181,7 @@ let selectedNoteId = null;
 let activeProject = null;
 let projectConfig = null;
 
-  <script>
+
   // Base URL for your Worker API
   const API_BASE = "https://client-portal-api.dennis-e64.workers.dev/api";
 
@@ -190,10 +190,9 @@ let projectConfig = null;
   const activeProject = urlParams.get("project") || "gtr";
 
   // Auto-load history when the page is ready
-  window.addEventListener("DOMContentLoaded", () => {
-    renderNoteHistory();
+  //window.addEventListener("DOMContentLoaded", () => {
+  //  renderNoteHistory();
   });
-</script>
 
 
 
