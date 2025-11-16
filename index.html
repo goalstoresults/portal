@@ -144,7 +144,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.0.27</span>
+      <span class="muted" style="margin-left:12px;">v1.0.28</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -182,10 +182,11 @@ let activeProject = null;
 let projectConfig = null;
 
 const API_BASE = 'https://client-portal-api.dennis-e64.workers.dev/api';
-if (typeof activeProject === "undefined") {
+if (!window.activeProject) {
   const urlParams = new URLSearchParams(window.location.search);
   window.activeProject = urlParams.get("project") || "gtr";
 }
+
 
   
 /* ---------- Bootstrapping ---------- */
