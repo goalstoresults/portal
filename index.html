@@ -144,7 +144,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.0.31</span>
+      <span class="muted" style="margin-left:12px;">v1.0.32</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -469,7 +469,7 @@ async function renderAddNoteForm() {
     </div>
   `;
 
-  // 🔧 Attach event handlers AFTER the HTML is injected
+  // Upload button handler
   document.getElementById('uploadNoteBtn').onclick = async () => {
     const note_text = document.getElementById('noteContent').value.trim();
     const external_id = document.getElementById('externalId').value.trim();
@@ -510,12 +510,13 @@ async function renderAddNoteForm() {
     }
   };
 
+  // Clear button handler
   document.getElementById('clearNoteBtn').onclick = () => {
     document.getElementById('noteContent').value = '';
     document.getElementById('externalId').value = '';
   };
 
-  // ✅ Keep any tab/subtab wiring you had here
+  // Keep your tab/subtab wiring here if needed
   // e.g. loadSubtab('notes') or enableNoteReviewSubtabs()
 }
 
