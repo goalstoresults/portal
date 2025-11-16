@@ -184,7 +184,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.2.3</span>
+      <span class="muted" style="margin-left:12px;">v1.2.4</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -646,7 +646,7 @@ function renderNotesTable(notes) {
       <td>${note.client_contact_name || ""}</td>
       <td>${note.needs_review ? "Yes" : "No"}</td>
       <td>
-        <button onclick="reviewNote('${note.id}')">Review</button>
+        <button onclick="startNoteReview('${note.id}')">Review</button>
         <button class="danger" onclick="deleteNote('${note.id}')">Delete</button>
       </td>
     `;
@@ -684,6 +684,20 @@ function enableNoteReviewSubtabs() {
   if (relBtn) relBtn.disabled = false;
 }
 
+function startNoteReview(noteId) {
+  // set the selected note
+  selectedNoteId = noteId;
+
+  // enable the disabled subtabs
+  const reviewBtn = document.querySelector('#subtabs [data-subtab-id="review"]');
+  const relBtn = document.querySelector('#subtabs [data-subtab-id="relationships"]');
+  if (reviewBtn) reviewBtn.disabled = false;
+  if (relBtn) relBtn.disabled = false;
+
+  // switch to the Review tab
+  loadSubtab('notes', 'review');
+}
+  
 async function renderNoteReview() {
   const content = document.getElementById('content');
   if (!selectedNoteId) {
