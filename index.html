@@ -514,9 +514,12 @@ async function renderAddNoteForm() {
     document.getElementById('noteContent').value = '';
     document.getElementById('externalId').value = '';
   };
+
+  // ✅ Keep any tab/subtab wiring you had here
+  // e.g. loadSubtab('notes') or enableNoteReviewSubtabs()
 }
 
-
+  
 document.getElementById('uploadNoteBtn').onclick = async () => {
   const note_text = document.getElementById('noteContent').value.trim();
   const external_id = document.getElementById('externalId').value.trim();
