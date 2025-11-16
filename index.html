@@ -144,7 +144,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.0.28</span>
+      <span class="muted" style="margin-left:12px;">v1.0.29</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -505,9 +505,8 @@ async function renderNoteHistory() {
 
 
   try {
-    const res = await fetch(`${API_BASE}/notes?project=${encodeURIComponent(window.activeProject)}`, {
-      method: "GET"
-    });
+  const res = await fetch(`${API_BASE}/notes?project=${encodeURIComponent(window.activeProject)}&load_history=true`);
+
 
     const json = await res.json();
     if (!json.success || !Array.isArray(json.notes) || json.notes.length === 0) {
