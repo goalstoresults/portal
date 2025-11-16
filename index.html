@@ -144,7 +144,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.0.26</span>
+      <span class="muted" style="margin-left:12px;">v1.0.27</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -499,6 +499,9 @@ document.getElementById('uploadNoteBtn').onclick = async () => {
 async function renderNoteHistory() {
   const content = document.getElementById('content');
   content.innerHTML = `<div class="card loader">Loading Note History...</div>`;
+
+  console.log("Calling /notes with project:", window.activeProject);
+
 
   try {
     const res = await fetch(`${API_BASE}/notes?project=${encodeURIComponent(window.activeProject)}`, {
