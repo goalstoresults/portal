@@ -144,7 +144,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.0.21</span>
+      <span class="muted" style="margin-left:12px;">v1.0.22</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -182,6 +182,7 @@ let activeProject = null;
 let projectConfig = null;
 
 const API_BASE = 'https://client-portal-api.dennis-e64.workers.dev/api';
+
 
 /* ---------- Bootstrapping ---------- */
 async function fetchProjectsList() {
@@ -491,47 +492,34 @@ document.getElementById('uploadNoteBtn').onclick = async () => {
   }
 };
 
-
 async function renderNoteHistory() {
   const content = document.getElementById('content');
   content.innerHTML = `<div class="card loader">Loading Note History...</div>`;
 
   try {
-    const res = await fetch(
-      `${API_BASE}/notes_history?project=eq.${encodeURIComponent(activeProject)}&order=created_at.desc&limit=250`,
-      {
-        headers: {
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-        },
-      }
-    );
+    const res = await fetch(`${API_BASE}/notes?project=${encodeURIComponent(activeProject)}`, {
+      method: "GET"
+    });
 
-    if (!res.ok) {
-      const errText = await res.text();
-      content.innerHTML = `<div class="card">Error loading notes: ${errText}</div>`;
-      return;
-    }
-
-    const data = await res.json();
-    if (!Array.isArray(data) || data.length === 0) {
+    const json = await res.json();
+    if (!json.success || !Array.isArray(json.notes) || json.notes.length === 0) {
       content.innerHTML = `<div class="card">No notes found.</div>`;
       return;
     }
 
-    const rows = data.map(n => `
+    const rows = json.notes.map(n => `
       <div class="card note-row" data-note-id="${n.id}">
         <div class="row">
           <strong>${n.subject || '(no subject)'}</strong>
           <span class="spacer"></span>
-          <span class="muted">${n.note_date || ''}</span>
+          <span class="muted">${n.created_at?.slice(0, 10) || ''}</span>
         </div>
         <div class="muted">
           From: ${n.from_name || ''} (${n.from_email || ''})
-          • Status: ${n.review_status || 'pending'}
+          • Status: ${n.status || 'pending'}
           • Needs Review: ${n.needs_review ? 'Yes' : 'No'}
         </div>
-        <div style="margin-top:8px;">${n.summary || ''}</div>
+        <div style="margin-top:8px;">${n.note_text || ''}</div>
         <div class="row" style="margin-top:8px;">
           <button class="primary" onclick="selectNote('${n.id}')">Select</button>
         </div>
@@ -540,10 +528,9 @@ async function renderNoteHistory() {
 
     content.innerHTML = rows;
   } catch (err) {
-    content.innerHTML = `<div class="card">Error: ${err.message}</div>`;
+    content.innerHTML = `<div class="card">Error loading notes: ${err.message}</div>`;
   }
 }
-
 
 
 function enableNoteReviewSubtabs() {
