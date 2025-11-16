@@ -480,7 +480,7 @@ async function renderAddNoteForm() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           project: activeProject,
-          text: note_text,
+          raw_text: note_text,
           external_id: external_id || null
         })
       });
