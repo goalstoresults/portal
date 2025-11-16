@@ -184,7 +184,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.2.4</span>
+      <span class="muted" style="margin-left:12px;">v1.2.5</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -708,7 +708,7 @@ async function renderNoteReview() {
   content.innerHTML = `<div class="card loader">Loading note review...</div>`;
 
   try {
-    const res = await fetch(`${API_BASE}/notes_history?id=eq.${selectedNoteId}`);
+    const res = await fetch(`https://notes-history-module.dennis-e64.workers.dev/note_review?id=${selectedNoteId}`);
     const json = await res.json();
     const note = Array.isArray(json) ? json[0] : json;
 
