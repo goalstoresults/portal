@@ -144,7 +144,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.0.25</span>
+      <span class="muted" style="margin-left:12px;">v1.0.26</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -501,7 +501,7 @@ async function renderNoteHistory() {
   content.innerHTML = `<div class="card loader">Loading Note History...</div>`;
 
   try {
-    const res = await fetch(`${API_BASE}/notes?project=${encodeURIComponent(activeProject)}`, {
+    const res = await fetch(`${API_BASE}/notes?project=${encodeURIComponent(window.activeProject)}`, {
       method: "GET"
     });
 
