@@ -144,7 +144,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.0.31</span>
+      <span class="muted" style="margin-left:12px;">v1.0.30</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -469,44 +469,21 @@ async function renderAddNoteForm() {
     </div>
   `;
 
-  document.getElementById('uploadNoteBtn').onclick = async () => {
-    const note_text = document.getElementById('noteContent').value.trim();
-    const external_id = document.getElementById('externalId').value.trim();
-    if (!note_text) { alert('Note content is required.'); return; }
+document.getElementById('uploadNoteBtn').onclick = async () => {
+  const note_text = document.getElementById('noteContent').value.trim();
+  const external_id = document.getElementById('externalId').value.trim();
+  if (!note_text) { alert('Note content is required.'); return; }
 
-    try {
-      const res = await fetch('https://add-note-module.dennis-e64.workers.dev', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          project: activeProject,
-          text: note_text,
-          external_id: external_id || null
-        })
-      });
-
-      const data = await res.json();
-      if (res.ok && data.status === 'ok') {
-        alert('Note saved.');
-        selectedNoteId = data.note.id;
-        enableNoteReviewSubtabs();
-        await renderNoteHistory();
-      } else {
-        alert(data.error || 'Upload failed');
-        console.error('Add note error:', data);
-      }
-    } catch (err) {
-      alert('Upload failed');
-      console.error('Fetch exception:', err);
-    }
-  };
-
-  document.getElementById('clearNoteBtn').onclick = () => {
-    document.getElementById('noteContent').value = '';
-    document.getElementById('externalId').value = '';
-  };
+  const res = await fetch('https://gtr-notes-ingest.dennis-e64.workers.dev', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      project: activeProject,
+      text: note_text,
+      external_id: external_id || null
+    })
+  });
 }
-
 
   const data = await res.json();
   if (data.status === 'ok') {
