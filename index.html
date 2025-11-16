@@ -184,7 +184,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.2.2</span>
+      <span class="muted" style="margin-left:12px;">v1.2.3</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -686,8 +686,64 @@ function enableNoteReviewSubtabs() {
 
 async function renderNoteReview() {
   const content = document.getElementById('content');
-  if (!selectedNoteId) { content.innerHTML = `<div class="card">Select a note in history first.</div>`; return; }
-  content.innerHTML = `<div class="card">Review for note ${selectedNoteId} (wire to /api/note_review next).</div>`;
+  if (!selectedNoteId) {
+    content.innerHTML = `<div class="card">Select a note in history first.</div>`;
+    return;
+  }
+
+  content.innerHTML = `<div class="card loader">Loading note review...</div>`;
+
+  try {
+    const res = await fetch(`${API_BASE}/notes_history?id=eq.${selectedNoteId}`);
+    const json = await res.json();
+    const note = Array.isArray(json) ? json[0] : json;
+
+    if (!note) {
+      content.innerHTML = `<div class="card">Note not found.</div>`;
+      return;
+    }
+
+    const participants = note.participants || [];
+
+    const rows = participants.map(p => `
+      <tr>
+        <td>${p.raw_name || ''}</td>
+        <td>${p.ai_first || ''}</td>
+        <td>${p.ai_last || ''}</td>
+        <td>${p.role || ''}</td>
+        <td>${p.context || ''}</td>
+      </tr>
+    `).join('');
+
+    content.innerHTML = `
+      <div class="card">
+        <h3>${note.subject || '(no subject)'}</h3>
+        <div class="muted">From: ${note.from_name || ''} (${note.from_email || ''})</div>
+        <div class="muted">Sent: ${new Date(note.original_sent_at).toLocaleString()}</div>
+        <div class="muted">Entered: ${new Date(note.created_at).toLocaleString()}</div>
+        <div class="muted">Client: ${note.client_contact_name || '(not set)'}</div>
+        <div class="muted">Status: ${note.status || 'pending'} • Needs Review: ${note.needs_review ? 'Yes' : 'No'}</div>
+        <hr />
+        <div><strong>Summary:</strong><br />${note.summary || '(no summary)'}</div>
+        <hr />
+        <div><strong>Participants:</strong></div>
+        <table style="width:100%; border-collapse:collapse; margin-top:8px;">
+          <thead style="background:#f0f0f0;">
+            <tr>
+              <th>Raw Name</th>
+              <th>AI First</th>
+              <th>AI Last</th>
+              <th>Role/Type</th>
+              <th>Context</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    `;
+  } catch (err) {
+    content.innerHTML = `<div class="card">Error loading note: ${err.message}</div>`;
+  }
 }
 
 async function renderNoteRelationships() {
