@@ -144,7 +144,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.0.33</span>
+      <span class="muted" style="margin-left:12px;">v1.2.1</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -561,7 +561,8 @@ async function loadNotes() {
     needsReview: true,
   });
 
-  const res = await fetch(`${API_BASE}/notes-history-module?${query}`);
+  const res = await fetch(`https://notes-history-module.dennis-e64.workers.dev?${query}`);
+
   const data = await res.json();
   if (data.status === "ok") {
     renderNotesTable(data.notes);
@@ -582,7 +583,8 @@ async function applyFilters() {
     needsReview: true,
   });
 
-  const res = await fetch(`${API_BASE}/notes-history-module?${query}`);
+  const res = await fetch(`https://notes-history-module.dennis-e64.workers.dev?${query}`);
+
   const data = await res.json();
   if (data.status === "ok") {
     renderNotesTable(data.notes);
