@@ -11,8 +11,174 @@
   header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: #fff; border-bottom: 1px solid #e5e5ea; }
   #portal-title { font-size: 18px; font-weight: 600; }
   #project-selector { padding: 6px 8px; }
-  /* ... keep all your CSS from v1.2.2 unchanged ... */
+
+  /* Top tabs styled as folder tabs */
+  nav#tabs {
+    display: flex;
+    gap: 4px;
+    padding: 0 16px;
+    background: #f7f7f9;
+    border-bottom: 2px solid #ccc;
+  }
+
+  nav#tabs button {
+    background: #e0e0e0;
+    color: #333;
+    border: 1px solid #ccc;
+    border-bottom: none;
+    border-radius: 6px 6px 0 0;
+    padding: 10px 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  nav#tabs button.active {
+    background: #fff;
+    color: #000;
+    border-bottom: 2px solid #fff;
+  }
+
+  nav#tabs button:hover {
+    background: #f5f5f5;
+  }
+
+  /* Subtabs row under active folder */
+  nav#subtabs {
+    display: flex;
+    gap: 6px;
+    padding: 6px 16px;
+    background: #fff;
+    border-bottom: 1px solid #ddd;
+  }
+
+  nav#subtabs button {
+    background: #2979ff;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 6px 12px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  nav#subtabs button.active {
+    background: #1565c0;
+  }
+
+  nav#subtabs button:hover {
+    background: #1565c0;
+  }
+
+  nav#subtabs button:disabled {
+    background: #90caf9;
+    color: #e0e0e0;
+    cursor: not-allowed;
+  }
+
+  /* Global button styles */
+  button {
+    padding: 8px 14px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s, box-shadow 0.2s;
+    background: #2979ff;
+    color: #fff;
+  }
+
+  button:hover {
+    background: #1565c0;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  }
+
+  button:disabled {
+    background: #90caf9;
+    color: #e0e0e0;
+    cursor: not-allowed;
+  }
+
+  button.primary {
+    background: #2979ff;
+    color: #fff;
+  }
+
+  button.primary:hover {
+    background: #1565c0;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  }
+
+  button.secondary {
+    background: #2196f3;
+    color: #fff;
+  }
+
+  button.secondary:hover {
+    background: #1976d2;
+  }
+
+  button.danger {
+    background: #e53935;
+    color: #fff;
+  }
+
+  button.danger:hover {
+    background: #c62828;
+  }
+
+  main#content { padding: 16px; }
+  .card { background: #fff; border: 1px solid #e5e5ea; border-radius: 8px; padding: 12px; margin-bottom: 12px; }
+  .muted { color: #666; }
+  .row { display: flex; align-items: center; gap: 8px; }
+  .spacer { flex: 1; }
+  .loader { font-size: 14px; color: #666; }
+  .hidden { display: none !important; }
+
+/* 🧾 Note History Table Styling */
+.notes-table-container {
+  padding: 16px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.notes-table-container table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+}
+
+.notes-table-container thead {
+  background: #f0f0f0;
+  border-bottom: 2px solid #ccc;
+}
+
+.notes-table-container th {
+  padding: 10px;
+  text-align: left;
+  font-weight: 600;
+  border-right: 1px solid #ddd;
+}
+
+.notes-table-container td {
+  padding: 8px;
+  border-bottom: 1px solid #eee;
+}
+
+.notes-table-container tbody tr:nth-child(even) {
+  background: #fafafa;
+}
+
+.notes-table-container tbody tr:hover {
+  background: #e8f0ff;
+}
 </style>
+
+
 </head>
 <body>
   <header>
@@ -31,10 +197,29 @@
 
   <main id="content"><div class="card"><p class="muted">Select a tab to start.</p></div></main>
 <script>
-const TAB_NAMES = { '1':'Contacts','2':'Relationships','3':'Notes','4':'Tasks','5':'Lookups','6':'Dashboard' };
-const SUBTAB_NAMES = { notes:[{id:'add',label:'Add Note',disabled:false},{id:'history',label:'Note History',disabled:false},{id:'review',label:'Note Review',disabled:true},{id:'relationships',label:'Note Relationships',disabled:true}] };
+const TAB_NAMES = {
+  '1': 'Contacts',
+  '2': 'Relationships',
+  '3': 'Notes',
+  '4': 'Tasks',
+  '5': 'Lookups',
+  '6': 'Dashboard'
+};
 
-let activeTab=null, activeSubtab=null, selectedNoteId=null, activeProject=null, projectConfig=null;
+const SUBTAB_NAMES = {
+  notes: [
+    { id: 'add', label: 'Add Note', disabled: false },
+    { id: 'history', label: 'Note History', disabled: false },
+    { id: 'review', label: 'Note Review', disabled: true },
+    { id: 'relationships', label: 'Note Relationships', disabled: true }
+  ]
+};
+
+let activeTab = null;
+let activeSubtab = null;
+let selectedNoteId = null;
+let activeProject = null;
+let projectConfig = null;
 
 const API_BASE = 'https://client-portal-api.dennis-e64.workers.dev/api';
 if (!window.activeProject) {
@@ -42,6 +227,9 @@ if (!window.activeProject) {
   window.activeProject = urlParams.get("project") || "gtr";
 }
 
+
+  
+/* ---------- Bootstrapping ---------- */
 async function fetchProjectsList() {
   const res = await fetch(`${API_BASE}/projects_config`);
   if (!res.ok) throw new Error('Failed to load projects list');
@@ -56,109 +244,148 @@ async function fetchProjectConfig(project) {
 }
 
 function setTitle(displayName) {
-  const titleEl=document.getElementById('portal-title');
-  titleEl.textContent=displayName||'Client Portal';
-  document.title=displayName||'Client Portal';
+  const titleEl = document.getElementById('portal-title');
+  titleEl.textContent = displayName || 'Client Portal';
+  document.title = displayName || 'Client Portal';
 }
 
-function renderProjectSelector(projects,selected) {
-  const sel=document.getElementById('project-selector');
-  sel.innerHTML='';
-  projects.forEach(p=>{
-    const opt=document.createElement('option');
-    opt.value=p.project;
-    opt.textContent=p.display_name||p.project;
-    if(p.project===selected) opt.selected=true;
+function renderProjectSelector(projects, selected) {
+  const sel = document.getElementById('project-selector');
+  sel.innerHTML = '';
+  projects.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.project;
+    opt.textContent = p.display_name || p.project;
+    if (p.project === selected) opt.selected = true;
     sel.appendChild(opt);
   });
-  sel.onchange=async(e)=>{ await initPortal(e.target.value); };
+  sel.onchange = async (e) => {
+    await initPortal(e.target.value);
+  };
 }
 
 async function initPortal(project) {
-  activeProject=project;
-  projectConfig=await fetchProjectConfig(project);
+  activeProject = project;
+  projectConfig = await fetchProjectConfig(project);
   setTitle(projectConfig.display_name);
-  renderTabs(projectConfig.enabled_tabs||[]);
-  const firstTab=(projectConfig.enabled_tabs||[])[0]||'1';
+  renderTabs(projectConfig.enabled_tabs || []);
+  const firstTab = (projectConfig.enabled_tabs || [])[0] || '1';
   await loadTab(firstTab);
 }
 
 async function bootstrap() {
   try {
-    const projects=await fetchProjectsList();
-    const urlParams=new URLSearchParams(window.location.search);
-    const projectParam=urlParams.get('project');
-    const selectorRow=document.getElementById('project-selector-row');
-    if(projectParam) {
-      if(selectorRow) selectorRow.classList.add('hidden');
-      activeProject=projectParam;
+    const projects = await fetchProjectsList();
+    const urlParams = new URLSearchParams(window.location.search);
+    const projectParam = urlParams.get('project');
+    const selectorRow = document.getElementById('project-selector-row');
+
+    if (projectParam) {
+      if (selectorRow) selectorRow.classList.add('hidden');
+      activeProject = projectParam;
       await initPortal(activeProject);
     } else {
-      if(selectorRow) selectorRow.classList.remove('hidden');
-      const defaultProject=projects[0]?.project;
-      renderProjectSelector(projects,defaultProject);
+      if (selectorRow) selectorRow.classList.remove('hidden');
+      const defaultProject = projects[0]?.project;
+      renderProjectSelector(projects, defaultProject);
       await initPortal(defaultProject);
     }
-  } catch(err) {
-    document.getElementById('content').innerHTML=`<div class="card">Bootstrap error: ${err.message}</div>`;
+  } catch (err) {
+    document.getElementById('content').innerHTML =
+      `<div class="card">Bootstrap error: ${err.message}</div>`;
   }
 }
-document.addEventListener('DOMContentLoaded',bootstrap);
-function buildQuery({startDate,endDate,nameOrEmail,needsReview=true}) {
-  const params=new URLSearchParams();
-  if(startDate) params.set("start_date",startDate);
-  if(endDate) params.set("end_date",endDate);
-  if(nameOrEmail) params.set("name_or_email",nameOrEmail);
-  params.set("needs_review",needsReview?"true":"false");
-  return params.toString();
-}
 
-async function renderNoteHistory() {
-  const content=document.getElementById('content');
-  content.innerHTML=`
-    <div class="notes-table-container">
-      <div class="row" style="gap:12px; margin-bottom:12px;">
-        <label>Date Start: <input type="date" id="dateStart"></label>
-        <label>Date End: <input type="date" id="dateEnd"></label>
-        <label>Name/Email: <input type="text" id="filterNameEmail"></label>
-        <button onclick="applyFilters()">Apply Filters</button>
-      </div>
-      <table>
-        <thead><tr><th>Created</th><th>Subject</th><th>From</th><th>Client</th><th>Needs Review</th><th>Actions</th></tr></thead>
-        <tbody id="notesTableBody"></tbody>
-      </table>
-    </div>`;
-  await loadNotes();
-}
+document.addEventListener('DOMContentLoaded', bootstrap);
 
-async function loadNotes() {
-  const now=new Date();
-  const sevenDaysAgo=new Date(now.getTime()-7*24*60*60*1000);
-  const query=buildQuery({startDate:sevenDaysAgo.toISOString(),endDate:now.toISOString(),needsReview:true});
-  const res=await fetch(`https://notes-history-module.dennis-e64.workers.dev?project=${encodeURIComponent(activeProject)}&${query}`);
-  const data=await res.json();
-  if(data.status==="ok") renderNotesTable(data.notes);
-  else console.error("Failed to load notes:",data.error);
-}
-
-async function applyFilters() {
-  const startDate=document.getElementById("dateStart").value;
-  const endDate=document.getElementById("dateEnd").value;
-  const nameOrEmail=document.getElementById("filterNameEmail").value;
-  const query=buildQuery({
-    startDate:startDate?new Date(startDate).toISOString():null,
-    endDate:endDate?new Date(endDate).toISOString():null,
-    nameOrEmail,
-    needsReview:true
+/* ---------- Top tabs ---------- */
+function renderTabs(enabledTabs = []) {
+  const nav = document.getElementById('tabs');
+  nav.innerHTML = '';
+  enabledTabs.forEach(id => {
+    const btn = document.createElement('button');
+    btn.textContent = TAB_NAMES[id] || `Tab ${id}`;
+    btn.dataset.tabId = id;
+    btn.onclick = () => loadTab(id);
+    if (id === activeTab) btn.classList.add('active');
+    nav.appendChild(btn);
   });
-  const res=await fetch(`https://notes-history-module.dennis-e64.workers.dev?project=${encodeURIComponent(activeProject)}&${query}`);
-  const data=await res.json();
-  if(data.status==="ok") renderNotesTable(data.notes);
-  else console.error("Filter query failed:",data.error);
 }
+
+function setActiveTabButton(id) {
+  const nav = document.getElementById('tabs');
+  [...nav.querySelectorAll('button')].forEach(b => {
+    b.classList.toggle('active', b.dataset.tabId === id);
+  });
+}
+
+/* ---------- Subtabs ---------- */
+function renderSubtabs(tabKey) {
+  const subnav = document.getElementById('subtabs');
+  subnav.innerHTML = '';
+  SUBTAB_NAMES[tabKey].forEach(st => {
+    const btn = document.createElement('button');
+    btn.textContent = st.label;
+    btn.dataset.subtabId = st.id;
+    btn.disabled = !!st.disabled;
+    btn.classList.toggle('active', activeSubtab === st.id);
+    btn.onclick = () => loadSubtab(tabKey, st.id);
+    subnav.appendChild(btn);
+  });
+}
+
+function setActiveSubtabButton(id) {
+  const subnav = document.getElementById('subtabs');
+  [...subnav.querySelectorAll('button')].forEach(b => {
+    b.classList.toggle('active', b.dataset.subtabId === id);
+  });
+}
+
+async function loadTab(id) {
+  activeTab = id;
+  setActiveTabButton(id);
+
+  const subnav = document.getElementById('subtabs');
+  if (id === '3') {
+    renderSubtabs('notes');
+    subnav.classList.remove('hidden');
+  } else {
+    subnav.classList.add('hidden');
+    subnav.innerHTML = '';
+    activeSubtab = null;
+    selectedNoteId = null;
+  }
+
+  const content = document.getElementById('content');
+  content.innerHTML = `<div class="card loader">Loading ${TAB_NAMES[id]}...</div>`;
+
+  try {
+    if (id === '3') await renderNotes(); // landing
+    else if (id === '1') await renderContacts();
+    else if (id === '2') await renderRelationships();
+    else if (id === '4') await renderTasks();
+    else if (id === '5') await renderLookups();
+    else if (id === '6') await renderDashboard();
+  } catch (err) {
+    content.innerHTML = `<div class="card">Error: ${err.message}</div>`;
+  }
+}
+
+async function loadSubtab(tabKey, subId) {
+  activeSubtab = subId;
+  setActiveSubtabButton(subId);
+  if (tabKey === 'notes') {
+    if (subId === 'add') await renderAddNoteForm();
+    if (subId === 'history') await renderNoteHistory();
+    if (subId === 'review') await renderNoteReview();
+    if (subId === 'relationships') await renderNoteRelationships();
+  }
+}
+
 /* ---------- Contacts ---------- */
 async function renderContacts() {
   const content = document.getElementById('content');
+
   content.innerHTML = `
     <div class="card" style="margin-bottom:12px;">
       <div class="row" style="gap:12px;">
@@ -254,6 +481,220 @@ async function renderRelationships() {
       <span class="muted"> (${r.relationship_type || 'relationship'})</span>
     </div>
   `).join('') || `<div class="card">No relationships found.</div>`;
+}
+
+/* ---------- Notes ---------- */
+async function renderNotes() {
+  const content = document.getElementById('content');
+  content.innerHTML = `<div class="card muted">Choose a subtab above (Add Note, Note History, etc.).</div>`;
+}
+
+async function renderAddNoteForm() {
+  const content = document.getElementById('content');
+  content.innerHTML = `
+    <div class="card">
+      <h3>Add Note <span class="muted">(Tech Admin Only)</span></h3>
+      <div style="margin-bottom:12px;">
+        <label><strong>Note / Email Content</strong></label><br />
+        <textarea id="noteContent" placeholder="Paste the full text here..." rows="12" style="width:100%;"></textarea>
+      </div>
+      <div style="margin-bottom:12px;">
+        <label><strong>External ID (optional)</strong></label><br />
+        <input id="externalId" placeholder="e.g., Gmail ID, GHL note id" style="width:100%;" />
+      </div>
+      <div class="row">
+        <button class="primary" id="uploadNoteBtn">Upload Note</button>
+        <button class="secondary" id="clearNoteBtn">Clear</button>
+      </div>
+    </div>
+  `;
+
+document.getElementById('uploadNoteBtn').onclick = async () => {
+  const note_text = document.getElementById('noteContent').value.trim();
+  const external_id = document.getElementById('externalId').value.trim();
+  if (!note_text) { alert('Note content is required.'); return; }
+
+  const content = document.getElementById('content');
+  content.innerHTML = `<div class="card loader">🧠 Updating... AI is processing your note. This may take up to 30 seconds.</div>`;
+
+  try {
+    const res = await fetch('https://add-note-module.dennis-e64.workers.dev', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        project: activeProject,
+        raw_text: note_text,
+        external_id: external_id || null
+      })
+    });
+
+    const data = await res.json();
+    if (res.ok && data.status === 'ok') {
+      alert('✅ Note saved and enriched.');
+      selectedNoteId = data.note.id;
+      enableNoteReviewSubtabs();
+      await renderNoteHistory();
+    } else {
+      alert(data.error || 'Upload failed');
+      console.error('Add note error:', data);
+    }
+  } catch (err) {
+    alert('Upload failed');
+    console.error('Fetch exception:', err);
+  }
+};
+
+
+  document.getElementById('clearNoteBtn').onclick = () => {
+    document.getElementById('noteContent').value = '';
+    document.getElementById('externalId').value = '';
+  };
+}
+
+
+async function renderNoteHistory() {
+  const content = document.getElementById('content');
+  content.innerHTML = `
+  <div class="notes-table-container">
+    <div class="row" style="gap:12px; margin-bottom:12px;">
+      <label>Date Start: <input type="date" id="dateStart"></label>
+      <label>Date End: <input type="date" id="dateEnd"></label>
+      <label>Name/Email: <input type="text" id="filterNameEmail"></label>
+      <button onclick="applyFilters()">Apply Filters</button>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Created</th>
+          <th>Subject</th>
+          <th>From</th>
+          <th>Client</th>
+          <th>Needs Review</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="notesTableBody"></tbody>
+    </table>
+  </div>
+`;
+
+
+  // Auto-load last 7 days
+  await loadNotes();
+}
+
+function buildQuery({ startDate, endDate, nameOrEmail, needsReview = true }) {
+  const params = new URLSearchParams();
+  if (startDate) params.set("start_date", startDate);
+  if (endDate) params.set("end_date", endDate);
+  if (nameOrEmail) params.set("name_or_email", nameOrEmail);
+  params.set("needs_review", needsReview ? "true" : "false");
+  return params.toString();
+}
+
+async function loadNotes() {
+  const now = new Date();
+  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+  const query = buildQuery({
+    startDate: sevenDaysAgo.toISOString(),
+    endDate: now.toISOString(),
+    needsReview: true,
+  });
+
+  const res = await fetch(`https://notes-history-module.dennis-e64.workers.dev?project=${encodeURIComponent(activeProject)}&${query}`);
+
+
+  const data = await res.json();
+  if (data.status === "ok") {
+    renderNotesTable(data.notes);
+  } else {
+    console.error("Failed to load notes:", data.error);
+  }
+}
+
+async function applyFilters() {
+  const startDate = document.getElementById("dateStart").value;
+  const endDate = document.getElementById("dateEnd").value;
+  const nameOrEmail = document.getElementById("filterNameEmail").value;
+
+  const query = buildQuery({
+    startDate: startDate ? new Date(startDate).toISOString() : null,
+    endDate: endDate ? new Date(endDate).toISOString() : null,
+    nameOrEmail,
+    needsReview: true,
+  });
+
+  const res = await fetch(`https://notes-history-module.dennis-e64.workers.dev?project=${encodeURIComponent(activeProject)}&${query}`);
+
+  const data = await res.json();
+  if (data.status === "ok") {
+    renderNotesTable(data.notes);
+  } else {
+    console.error("Filter query failed:", data.error);
+  }
+}
+
+function renderNotesTable(notes) {
+  const tableBody = document.getElementById("notesTableBody");
+  tableBody.innerHTML = "";
+  notes.forEach(note => {
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td>${new Date(note.created_at).toLocaleString()}</td>
+      <td>${note.subject || "(no subject)"}</td>
+      <td>${note.from_name || ""}</td>
+      <td>${note.client_contact_name || ""}</td>
+      <td>${note.needs_review ? "Yes" : "No"}</td>
+      <td>
+        <button onclick="reviewNote('${note.id}')">Review</button>
+        <button class="danger" onclick="deleteNote('${note.id}')">Delete</button>
+      </td>
+    `;
+    tableBody.appendChild(row);
+  });
+}
+
+async function reviewNote(noteId) {
+  const res = await fetch(`${API_BASE}/notes_history?id=eq.${noteId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ needs_review: false, review_status: "completed" }),
+  });
+  if (res.ok) {
+    alert("Note reviewed!");
+    await loadNotes();
+  }
+}
+
+async function deleteNote(noteId) {
+  const res = await fetch(`${API_BASE}/notes_history?id=eq.${noteId}`, {
+    method: "DELETE"
+  });
+  if (res.ok) {
+    alert("Note deleted!");
+    await loadNotes();
+  }
+}
+
+
+function enableNoteReviewSubtabs() {
+  const reviewBtn = document.querySelector('#subtabs [data-subtab-id="review"]');
+  const relBtn = document.querySelector('#subtabs [data-subtab-id="relationships"]');
+  if (reviewBtn) reviewBtn.disabled = false;
+  if (relBtn) relBtn.disabled = false;
+}
+
+async function renderNoteReview() {
+  const content = document.getElementById('content');
+  if (!selectedNoteId) { content.innerHTML = `<div class="card">Select a note in history first.</div>`; return; }
+  content.innerHTML = `<div class="card">Review for note ${selectedNoteId} (wire to /api/note_review next).</div>`;
+}
+
+async function renderNoteRelationships() {
+  const content = document.getElementById('content');
+  if (!selectedNoteId) { content.innerHTML = `<div class="card">Select a note in history first.</div>`; return; }
+  content.innerHTML = `<div class="card">Relationships for note ${selectedNoteId} (wire to relationships UI next).</div>`;
 }
 
 /* ---------- Tasks ---------- */
