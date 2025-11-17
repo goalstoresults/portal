@@ -144,7 +144,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.2.3</span>
+      <span class="muted" style="margin-left:12px;">v1.2.4</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -561,16 +561,14 @@ async function loadNotes() {
     startDate: sevenDaysAgo.toISOString(),
     endDate: now.toISOString(),
     needsReview: true,
+    project: activeProject   // ✅ include project here
   });
 
   try {
-    const res = await fetch(`${API_BASE}/notes-history-module?${query}`);
-
+    const res = await fetch(`https://notes-history-module.dennis-e64.workers.dev/notes-history-module?${query}`);
     if (!res.ok) {
       const text = await res.text();
       console.error("History fetch failed:", res.status, text);
-      document.getElementById("notesTableBody").innerHTML =
-        `<tr><td colspan="6" class="muted">Failed to load notes (${res.status}).</td></tr>`;
       return;
     }
     const data = await res.json();
@@ -578,13 +576,9 @@ async function loadNotes() {
       renderNotesTable(data.notes);
     } else {
       console.error("Worker returned error:", data.error);
-      document.getElementById("notesTableBody").innerHTML =
-        `<tr><td colspan="6" class="muted">No notes found.</td></tr>`;
     }
   } catch (err) {
     console.error("History fetch exception:", err);
-    document.getElementById("notesTableBody").innerHTML =
-      `<tr><td colspan="6" class="muted">Error loading notes.</td></tr>`;
   }
 }
 
@@ -599,10 +593,11 @@ async function applyFilters() {
     endDate: endDate ? new Date(endDate).toISOString() : null,
     nameOrEmail,
     needsReview: true,
+    project: activeProject   // ✅ include project here
   });
 
   try {
-    const res = await fetch(`${API_BASE}/notes-history-module?${query}`);
+    const res = await fetch(`https://notes-history-module.dennis-e64.workers.dev/notes-history-module?${query}`);
 
     if (!res.ok) {
       const text = await res.text();
