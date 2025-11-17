@@ -144,7 +144,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.2.2</span>
+      <span class="muted" style="margin-left:12px;">v1.2.3</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -564,7 +564,8 @@ async function loadNotes() {
   });
 
   try {
-    const res = await fetch(`https://notes-history-module.dennis-e64.workers.dev?${query}`);
+    const res = await fetch(`${API_BASE}/notes-history-module?${query}`);
+
     if (!res.ok) {
       const text = await res.text();
       console.error("History fetch failed:", res.status, text);
@@ -601,7 +602,8 @@ async function applyFilters() {
   });
 
   try {
-    const res = await fetch(`https://notes-history-module.dennis-e64.workers.dev?${query}`);
+    const res = await fetch(`${API_BASE}/notes-history-module?${query}`);
+
     if (!res.ok) {
       const text = await res.text();
       console.error("Filter fetch failed:", res.status, text);
