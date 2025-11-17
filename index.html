@@ -144,7 +144,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.2.7</span>
+      <span class="muted" style="margin-left:12px;">v1.0.33</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -548,10 +548,8 @@ function buildQuery({ startDate, endDate, nameOrEmail, needsReview = true }) {
   if (endDate) params.set("end_date", endDate);
   if (nameOrEmail) params.set("name_or_email", nameOrEmail);
   params.set("needs_review", needsReview ? "true" : "false");
-  params.set("project", activeProject); // ✅ add this
   return params.toString();
 }
-
 
 async function loadNotes() {
   const now = new Date();
@@ -561,44 +559,16 @@ async function loadNotes() {
     startDate: sevenDaysAgo.toISOString(),
     endDate: now.toISOString(),
     needsReview: true,
-    project: activeProject
   });
 
-  try {
-    const url = `https://notes-history-module.dennis-e64.workers.dev/notes-history-module?${query}`;
-    console.log("Fetching notes from:", url);
-
-    const res = await fetch(url);
-    const text = await res.text();
-    console.log("Raw response:", text);
-
-    if (!res.ok) {
-      console.error("History fetch failed:", res.status, text);
-      return;
-    }
-
-    let data;
-    try {
-      data = JSON.parse(text);
-    } catch (parseErr) {
-      console.error("JSON parse error:", parseErr);
-      return;
-    }
-
-    console.log("Parsed JSON:", data);
-
-    if (data.status === "ok" && Array.isArray(data.notes)) {
-      console.log("Notes array length:", data.notes.length);
-      renderNotesTable(data.notes);
-    } else {
-      console.error("Worker returned error:", data.error || "Unexpected payload");
-    }
-  } catch (err) {
-    console.error("History fetch exception:", err);
+  const res = await fetch(`${API_BASE}/notes-history-module?${query}`);
+  const data = await res.json();
+  if (data.status === "ok") {
+    renderNotesTable(data.notes);
+  } else {
+    console.error("Failed to load notes:", data.error);
   }
 }
-
-
 
 async function applyFilters() {
   const startDate = document.getElementById("dateStart").value;
@@ -610,34 +580,16 @@ async function applyFilters() {
     endDate: endDate ? new Date(endDate).toISOString() : null,
     nameOrEmail,
     needsReview: true,
-    project: activeProject   // ✅ include project here
   });
 
-  try {
-    const res = await fetch(`https://notes-history-module.dennis-e64.workers.dev/notes-history-module?${query}`);
-
-    if (!res.ok) {
-      const text = await res.text();
-      console.error("Filter fetch failed:", res.status, text);
-      document.getElementById("notesTableBody").innerHTML =
-        `<tr><td colspan="6" class="muted">Failed to apply filters (${res.status}).</td></tr>`;
-      return;
-    }
-    const data = await res.json();
-    if (data.status === "ok") {
-      renderNotesTable(data.notes);
-    } else {
-      console.error("Worker returned error:", data.error);
-      document.getElementById("notesTableBody").innerHTML =
-        `<tr><td colspan="6" class="muted">No notes match your filters.</td></tr>`;
-    }
-  } catch (err) {
-    console.error("Filter fetch exception:", err);
-    document.getElementById("notesTableBody").innerHTML =
-      `<tr><td colspan="6" class="muted">Error applying filters.</td></tr>`;
+  const res = await fetch(`${API_BASE}/notes-history-module?${query}`);
+  const data = await res.json();
+  if (data.status === "ok") {
+    renderNotesTable(data.notes);
+  } else {
+    console.error("Filter query failed:", data.error);
   }
 }
-
 
 function renderNotesTable(notes) {
   const tableBody = document.getElementById("notesTableBody");
@@ -660,15 +612,15 @@ function renderNotesTable(notes) {
 }
 
 async function reviewNote(noteId) {
-  //const res = await fetch(`${API_BASE}/notes_history?id=eq.${noteId}`, {
-  //  method: "PATCH",
-  //  headers: { "Content-Type": "application/json" },
-  //  body: JSON.stringify({ needs_review: false, review_status: "completed" }),
-  //});
-  //if (res.ok) {
-  //  alert("Note reviewed!");
-  //  await loadNotes();
-  //}
+  const res = await fetch(`${API_BASE}/notes_history?id=eq.${noteId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ needs_review: false, review_status: "completed" }),
+  });
+  if (res.ok) {
+    alert("Note reviewed!");
+    await loadNotes();
+  }
 }
 
 async function deleteNote(noteId) {
@@ -844,6 +796,5 @@ async function renderDashboard() {
 </script>
 </body>
 </html>
-  
   
   
