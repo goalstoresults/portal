@@ -136,6 +136,46 @@
   .spacer { flex: 1; }
   .loader { font-size: 14px; color: #666; }
   .hidden { display: none !important; }
+
+/* 🧾 Note History Table Styling */
+.notes-table-container {
+  padding: 16px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.notes-table-container table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+}
+
+.notes-table-container thead {
+  background: #f0f0f0;
+  border-bottom: 2px solid #ccc;
+}
+
+.notes-table-container th {
+  padding: 10px;
+  text-align: left;
+  font-weight: 600;
+  border-right: 1px solid #ddd;
+}
+
+.notes-table-container td {
+  padding: 8px;
+  border-bottom: 1px solid #eee;
+}
+
+.notes-table-container tbody tr:nth-child(even) {
+  background: #fafafa;
+}
+
+.notes-table-container tbody tr:hover {
+  background: #e8f0ff;
+}
 </style>
 
 
@@ -144,7 +184,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.2.1</span>
+      <span class="muted" style="margin-left:12px;">v1.2.2</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -515,28 +555,29 @@ document.getElementById('uploadNoteBtn').onclick = async () => {
 async function renderNoteHistory() {
   const content = document.getElementById('content');
   content.innerHTML = `
-    <div class="card">
-      <div class="row" style="gap:12px; margin-bottom:12px;">
-        <label>Date Start: <input type="date" id="dateStart"></label>
-        <label>Date End: <input type="date" id="dateEnd"></label>
-        <label>Name/Email: <input type="text" id="filterNameEmail"></label>
-        <button onclick="applyFilters()">Apply Filters</button>
-      </div>
-      <table style="width:100%; border-collapse:collapse;">
-        <thead>
-          <tr>
-            <th>Created</th>
-            <th>Subject</th>
-            <th>From</th>
-            <th>Client</th>
-            <th>Needs Review</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="notesTableBody"></tbody>
-      </table>
+  <div class="notes-table-container">
+    <div class="row" style="gap:12px; margin-bottom:12px;">
+      <label>Date Start: <input type="date" id="dateStart"></label>
+      <label>Date End: <input type="date" id="dateEnd"></label>
+      <label>Name/Email: <input type="text" id="filterNameEmail"></label>
+      <button onclick="applyFilters()">Apply Filters</button>
     </div>
-  `;
+    <table>
+      <thead>
+        <tr>
+          <th>Created</th>
+          <th>Subject</th>
+          <th>From</th>
+          <th>Client</th>
+          <th>Needs Review</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="notesTableBody"></tbody>
+    </table>
+  </div>
+`;
+
 
   // Auto-load last 7 days
   await loadNotes();
@@ -798,5 +839,3 @@ async function renderDashboard() {
 </script>
 </body>
 </html>
-  
-  
