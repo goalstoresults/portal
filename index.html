@@ -144,7 +144,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.0.33</span>
+      <span class="muted" style="margin-left:12px;">v1.0.32</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -514,122 +514,44 @@ document.getElementById('uploadNoteBtn').onclick = async () => {
 
 async function renderNoteHistory() {
   const content = document.getElementById('content');
-  content.innerHTML = `
-    <div class="card">
-      <div class="row" style="gap:12px; margin-bottom:12px;">
-        <label>Date Start: <input type="date" id="dateStart"></label>
-        <label>Date End: <input type="date" id="dateEnd"></label>
-        <label>Name/Email: <input type="text" id="filterNameEmail"></label>
-        <button onclick="applyFilters()">Apply Filters</button>
+  content.innerHTML = `<div class="card loader">Loading Note History...</div>`;
+
+  console.log("Calling /notes with project:", window.activeProject);
+
+
+  try {
+  //const res = await fetch(`${API_BASE}/notes?project=${encodeURIComponent(activeProject)}`);
+  const res = await fetch(`${API_BASE}/notes?project=nyfo`);
+
+
+    const json = await res.json();
+    if (!json.success || !Array.isArray(json.notes) || json.notes.length === 0) {
+      content.innerHTML = `<div class="card">No notes found.</div>`;
+      return;
+    }
+
+    const rows = json.notes.map(n => `
+      <div class="card note-row" data-note-id="${n.id}">
+        <div class="row">
+          <strong>${n.subject || '(no subject)'}</strong>
+          <span class="spacer"></span>
+          <span class="muted">${n.created_at?.slice(0, 10) || ''}</span>
+        </div>
+        <div class="muted">
+          From: ${n.from_name || ''} (${n.from_email || ''})
+          • Status: ${n.status || 'pending'}
+          • Needs Review: ${n.needs_review ? 'Yes' : 'No'}
+        </div>
+        <div style="margin-top:8px;">${n.note_text || ''}</div>
+        <div class="row" style="margin-top:8px;">
+          <button class="primary" onclick="selectNote('${n.id}')">Select</button>
+        </div>
       </div>
-      <table style="width:100%; border-collapse:collapse;">
-        <thead>
-          <tr>
-            <th>Created</th>
-            <th>Subject</th>
-            <th>From</th>
-            <th>Client</th>
-            <th>Needs Review</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="notesTableBody"></tbody>
-      </table>
-    </div>
-  `;
+    `).join('');
 
-  // Auto-load last 7 days
-  await loadNotes();
-}
-
-function buildQuery({ startDate, endDate, nameOrEmail, needsReview = true }) {
-  const params = new URLSearchParams();
-  if (startDate) params.set("start_date", startDate);
-  if (endDate) params.set("end_date", endDate);
-  if (nameOrEmail) params.set("name_or_email", nameOrEmail);
-  params.set("needs_review", needsReview ? "true" : "false");
-  return params.toString();
-}
-
-async function loadNotes() {
-  const now = new Date();
-  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-
-  const query = buildQuery({
-    startDate: sevenDaysAgo.toISOString(),
-    endDate: now.toISOString(),
-    needsReview: true,
-  });
-
-  const res = await fetch(`${API_BASE}/notes-history-module?${query}`);
-  const data = await res.json();
-  if (data.status === "ok") {
-    renderNotesTable(data.notes);
-  } else {
-    console.error("Failed to load notes:", data.error);
-  }
-}
-
-async function applyFilters() {
-  const startDate = document.getElementById("dateStart").value;
-  const endDate = document.getElementById("dateEnd").value;
-  const nameOrEmail = document.getElementById("filterNameEmail").value;
-
-  const query = buildQuery({
-    startDate: startDate ? new Date(startDate).toISOString() : null,
-    endDate: endDate ? new Date(endDate).toISOString() : null,
-    nameOrEmail,
-    needsReview: true,
-  });
-
-  const res = await fetch(`${API_BASE}/notes-history-module?${query}`);
-  const data = await res.json();
-  if (data.status === "ok") {
-    renderNotesTable(data.notes);
-  } else {
-    console.error("Filter query failed:", data.error);
-  }
-}
-
-function renderNotesTable(notes) {
-  const tableBody = document.getElementById("notesTableBody");
-  tableBody.innerHTML = "";
-  notes.forEach(note => {
-    const row = document.createElement("tr");
-    row.innerHTML = `
-      <td>${new Date(note.created_at).toLocaleString()}</td>
-      <td>${note.subject || "(no subject)"}</td>
-      <td>${note.from_name || ""}</td>
-      <td>${note.client_contact_name || ""}</td>
-      <td>${note.needs_review ? "Yes" : "No"}</td>
-      <td>
-        <button onclick="reviewNote('${note.id}')">Review</button>
-        <button class="danger" onclick="deleteNote('${note.id}')">Delete</button>
-      </td>
-    `;
-    tableBody.appendChild(row);
-  });
-}
-
-async function reviewNote(noteId) {
-  const res = await fetch(`${API_BASE}/notes_history?id=eq.${noteId}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ needs_review: false, review_status: "completed" }),
-  });
-  if (res.ok) {
-    alert("Note reviewed!");
-    await loadNotes();
-  }
-}
-
-async function deleteNote(noteId) {
-  const res = await fetch(`${API_BASE}/notes_history?id=eq.${noteId}`, {
-    method: "DELETE"
-  });
-  if (res.ok) {
-    alert("Note deleted!");
-    await loadNotes();
+    content.innerHTML = rows;
+  } catch (err) {
+    content.innerHTML = `<div class="card">Error loading notes: ${err.message}</div>`;
   }
 }
 
