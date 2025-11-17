@@ -144,7 +144,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.2.5</span>
+      <span class="muted" style="margin-left:12px;">v1.2.6</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -539,7 +539,7 @@ async function renderNoteHistory() {
   `;
 
   // Auto-load last 7 days
-  //await loadNotes();
+  await loadNotes();
 }
 
 function buildQuery({ startDate, endDate, nameOrEmail, needsReview = true }) {
@@ -643,14 +643,14 @@ function renderNotesTable(notes) {
 }
 
 async function reviewNote(noteId) {
-  const res = await fetch(`${API_BASE}/notes_history?id=eq.${noteId}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ needs_review: false, review_status: "completed" }),
-  });
-  if (res.ok) {
-    alert("Note reviewed!");
-    await loadNotes();
+  //const res = await fetch(`${API_BASE}/notes_history?id=eq.${noteId}`, {
+  //  method: "PATCH",
+  //  headers: { "Content-Type": "application/json" },
+  //  body: JSON.stringify({ needs_review: false, review_status: "completed" }),
+  //});
+  //if (res.ok) {
+  //  alert("Note reviewed!");
+  //  await loadNotes();
   }
 }
 
