@@ -184,7 +184,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.2.4</span>
+      <span class="muted" style="margin-left:12px;">v1.2.5</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -561,6 +561,7 @@ function clearFilters() {
 async function renderNoteHistory() {
   const content = document.getElementById('content');
   content.innerHTML = `
+<div class="notes-table-container">
   <div class="row" style="gap:12px; margin-bottom:12px;">
   <label>Date Start: <input type="date" id="dateStart"></label>
   <label>Date End: <input type="date" id="dateEnd"></label>
@@ -568,6 +569,8 @@ async function renderNoteHistory() {
   <button onclick="applyFilters()">Apply Filters</button>
   <button class="secondary" onclick="clearFilters()">Clear Filters</button>
 </div>
+
+
 
     <table>
       <thead>
