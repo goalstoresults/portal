@@ -144,7 +144,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.2.4</span>
+      <span class="muted" style="margin-left:12px;">v1.2.5</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -539,7 +539,7 @@ async function renderNoteHistory() {
   `;
 
   // Auto-load last 7 days
-  await loadNotes();
+  //await loadNotes();
 }
 
 function buildQuery({ startDate, endDate, nameOrEmail, needsReview = true }) {
