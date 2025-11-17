@@ -144,7 +144,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.2.6</span>
+      <span class="muted" style="margin-left:12px;">v1.2.7</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -561,26 +561,43 @@ async function loadNotes() {
     startDate: sevenDaysAgo.toISOString(),
     endDate: now.toISOString(),
     needsReview: true,
-    project: activeProject   // ✅ include project here
+    project: activeProject
   });
 
   try {
-    const res = await fetch(`https://notes-history-module.dennis-e64.workers.dev/notes-history-module?${query}`);
+    const url = `https://notes-history-module.dennis-e64.workers.dev/notes-history-module?${query}`;
+    console.log("Fetching notes from:", url);
+
+    const res = await fetch(url);
+    const text = await res.text();
+    console.log("Raw response:", text);
+
     if (!res.ok) {
-      const text = await res.text();
       console.error("History fetch failed:", res.status, text);
       return;
     }
-    const data = await res.json();
-    if (data.status === "ok") {
+
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (parseErr) {
+      console.error("JSON parse error:", parseErr);
+      return;
+    }
+
+    console.log("Parsed JSON:", data);
+
+    if (data.status === "ok" && Array.isArray(data.notes)) {
+      console.log("Notes array length:", data.notes.length);
       renderNotesTable(data.notes);
     } else {
-      console.error("Worker returned error:", data.error);
+      console.error("Worker returned error:", data.error || "Unexpected payload");
     }
   } catch (err) {
     console.error("History fetch exception:", err);
   }
 }
+
 
 
 async function applyFilters() {
