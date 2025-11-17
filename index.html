@@ -184,7 +184,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.2.3</span>
+      <span class="muted" style="margin-left:12px;">v1.2.4</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -551,17 +551,24 @@ document.getElementById('uploadNoteBtn').onclick = async () => {
   };
 }
 
-
+function clearFilters() {
+  document.getElementById("dateStart").value = "";
+  document.getElementById("dateEnd").value = "";
+  document.getElementById("filterNameEmail").value = "";
+  loadNotes(); // reload default 7‑day view
+}
+  
 async function renderNoteHistory() {
   const content = document.getElementById('content');
   content.innerHTML = `
-  <div class="notes-table-container">
-    <div class="row" style="gap:12px; margin-bottom:12px;">
-      <label>Date Start: <input type="date" id="dateStart"></label>
-      <label>Date End: <input type="date" id="dateEnd"></label>
-      <label>Name/Email: <input type="text" id="filterNameEmail"></label>
-      <button onclick="applyFilters()">Apply Filters</button>
-    </div>
+  <div class="row" style="gap:12px; margin-bottom:12px;">
+  <label>Date Start: <input type="date" id="dateStart"></label>
+  <label>Date End: <input type="date" id="dateEnd"></label>
+  <label>Name/Email: <input type="text" id="filterNameEmail"></label>
+  <button onclick="applyFilters()">Apply Filters</button>
+  <button class="secondary" onclick="clearFilters()">Clear Filters</button>
+</div>
+
     <table>
       <thead>
         <tr>
@@ -583,6 +590,18 @@ async function renderNoteHistory() {
   await loadNotes();
 }
 
+function toStartOfDayISO(dateStr) {
+  const d = new Date(dateStr);
+  d.setHours(0,0,0,0);
+  return d.toISOString();
+}
+
+function toEndOfDayISO(dateStr) {
+  const d = new Date(dateStr);
+  d.setHours(23,59,59,999);
+  return d.toISOString();
+}
+  
 function buildQuery({ startDate, endDate, nameOrEmail, needsReview = true }) {
   const params = new URLSearchParams();
   if (startDate) params.set("start_date", startDate);
@@ -619,11 +638,12 @@ async function applyFilters() {
   const nameOrEmail = document.getElementById("filterNameEmail").value;
 
   const query = buildQuery({
-    startDate: startDate ? new Date(startDate).toISOString() : null,
-    endDate: endDate ? new Date(endDate).toISOString() : null,
-    nameOrEmail,
-    needsReview: true,
-  });
+  startDate: startDate ? toStartOfDayISO(startDate) : null,
+  endDate: endDate ? toEndOfDayISO(endDate) : null,
+  nameOrEmail,
+  needsReview: true,
+});
+
 
   const res = await fetch(`https://notes-history-module.dennis-e64.workers.dev?project=${encodeURIComponent(activeProject)}&${query}`);
 
