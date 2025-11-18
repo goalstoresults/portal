@@ -184,7 +184,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.2.16</span>
+      <span class="muted" style="margin-left:12px;">v1.2.17</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -727,18 +727,17 @@ async function renderNoteReview() {
     if (!note) throw new Error("Note not found");
 
     let relationships = [];
-try {
-  const relRes = await fetch(
-    `https://notes-history-module.dennis-e64.workers.dev?project=${encodeURIComponent(activeProject)}&note_id=eq.${selectedNoteId}&table=notes_relationships`
-  );
-  const relData = await relRes.json();
-  if (relData.status === "ok" && Array.isArray(relData.notes)) {
-    relationships = relData.notes;
-  }
-} catch (err) {
-  console.warn("Failed to load relationships:", err);
-}
-
+    try {
+      const relRes = await fetch(
+        `https://notes-history-module.dennis-e64.workers.dev?project=${encodeURIComponent(activeProject)}&note_id=eq.${selectedNoteId}&table=notes_relationships`
+      );
+      const relData = await relRes.json();
+      if (relData.status === "ok" && Array.isArray(relData.notes)) {
+        relationships = relData.notes;
+      }
+    } catch (err) {
+      console.warn("Failed to load relationships:", err);
+    }
 
     content.innerHTML = `
       <div class="card">
@@ -755,7 +754,7 @@ try {
           <summary style="cursor:pointer; font-weight:600;">▼ Raw Text (click to expand)</summary>
           <pre style="white-space:pre-wrap; margin-top:8px;">${note.raw_text || ""}</pre>
         </details>
-        ${note.relationships && note.relationships.length > 0 ? `
+        ${relationships.length > 0 ? `
           <div class="card" style="margin-top:16px;">
             <h4>Participants Detected in Note</h4>
             <table style="width:100%; border-collapse:collapse;">
@@ -769,7 +768,7 @@ try {
                 </tr>
               </thead>
               <tbody>
-                ${note.relationships.map(r => `
+                ${relationships.map(r => `
                   <tr>
                     <td style="padding:8px;">${r.raw_name || ""}</td>
                     <td style="padding:8px;">${r.ai_first || ""}</td>
