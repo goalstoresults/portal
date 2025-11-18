@@ -184,7 +184,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.2.11</span>
+      <span class="muted" style="margin-left:12px;">v1.2.12</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -725,6 +725,9 @@ async function renderNoteReview() {
     const note = data.notes.find(n => n.id === selectedNoteId);
     if (!note) throw new Error("Note not found");
 
+    const relRes = await fetch(`${API_BASE}/note_relationships?note_id=eq.${selectedNoteId}&project=eq.${activeProject}`);
+    const relationships = await relRes.json();
+
 content.innerHTML = `
   <div class="card">
     <h3>Note Review</h3>
@@ -733,11 +736,43 @@ content.innerHTML = `
     <p><strong>Created:</strong> ${new Date(note.created_at).toLocaleString()}</p>
     <p><strong>Client:</strong> ${note.client_contact_name || "(not set)"}</p>
     <p><strong>Status:</strong> ${note.review_status || "pending"} • Needs review: ${note.needs_review ? "Yes" : "No"}</p>
+    <p><strong>Summary:</strong></p>
+    <div style="margin-bottom:12px;">${note.summary || "(no summary available)"}</div>
     <hr />
     <details>
       <summary style="cursor:pointer; font-weight:600;">▼ Raw Text (click to expand)</summary>
       <pre style="white-space:pre-wrap; margin-top:8px;">${note.raw_text || ""}</pre>
     </details>
+    if (Array.isArray(relationships) && relationships.length > 0) {
+  content.innerHTML += `
+    <div class="card">
+      <h4>Participants Detected in Note</h4>
+      <table style="width:100%; border-collapse:collapse;">
+        <thead style="background:#f0f0f0;">
+          <tr>
+            <th style="text-align:left; padding:8px;">Raw Name</th>
+            <th style="text-align:left; padding:8px;">AI First</th>
+            <th style="text-align:left; padding:8px;">AI Last</th>
+            <th style="text-align:left; padding:8px;">Role/Type</th>
+            <th style="text-align:left; padding:8px;">Context</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${relationships.map(r => `
+            <tr>
+              <td style="padding:8px;">${r.raw_name || ""}</td>
+              <td style="padding:8px;">${r.ai_first || ""}</td>
+              <td style="padding:8px;">${r.ai_last || ""}</td>
+              <td style="padding:8px;">${r.role_type || ""}</td>
+              <td style="padding:8px;">${r.context || ""}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
   </div>
 `;
 
