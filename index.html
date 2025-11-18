@@ -184,7 +184,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.2.9</span>
+      <span class="muted" style="margin-left:12px;">v1.2.10</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -723,19 +723,22 @@ async function renderNoteReview() {
     const note = data.notes[0];
     if (!note) throw new Error("Note not found");
 
-    content.innerHTML = `
-      <div class="card">
-        <h3>Note Review</h3>
-        <p><strong>Subject:</strong> ${note.subject || "(no subject)"}</p>
-        <p><strong>From:</strong> ${note.from_name || ""} (${note.from_email || ""})</p>
-        <p><strong>Created:</strong> ${new Date(note.created_at).toLocaleString()}</p>
-        <p><strong>Client:</strong> ${note.client_contact_name || "(not set)"}</p>
-        <p><strong>Status:</strong> ${note.review_status || "pending"} • Needs review: ${note.needs_review ? "Yes" : "No"}</p>
-        <hr />
-        <p><strong>Raw Text:</strong></p>
-        <pre style="white-space:pre-wrap;">${note.raw_text || ""}</pre>
-      </div>
-    `;
+content.innerHTML = `
+  <div class="card">
+    <h3>Note Review</h3>
+    <p><strong>Subject:</strong> ${note.subject || "(no subject)"}</p>
+    <p><strong>From:</strong> ${note.from_name || ""} (${note.from_email || ""})</p>
+    <p><strong>Created:</strong> ${new Date(note.created_at).toLocaleString()}</p>
+    <p><strong>Client:</strong> ${note.client_contact_name || "(not set)"}</p>
+    <p><strong>Status:</strong> ${note.review_status || "pending"} • Needs review: ${note.needs_review ? "Yes" : "No"}</p>
+    <hr />
+    <details>
+      <summary style="cursor:pointer; font-weight:600;">▼ Raw Text (click to expand)</summary>
+      <pre style="white-space:pre-wrap; margin-top:8px;">${note.raw_text || ""}</pre>
+    </details>
+  </div>
+`;
+
   } catch (err) {
     content.innerHTML = `<div class="card">Error loading note: ${err.message}</div>`;
   }
