@@ -184,7 +184,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.2.18</span>
+      <span class="muted" style="margin-left:12px;">v1.2.19</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -741,7 +741,14 @@ async function renderNoteReview() {
 
     content.innerHTML = `
       <div class="card">
-        <h3>Note Review</h3>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <h3>Note Review</h3>
+          <div>
+            <button onclick="openSetClientForm()" style="margin-right:8px;">Set Client</button>
+            <button onclick="deleteNote()" style="background:#f44336; color:white;">Delete</button>
+          </div>
+        </div>
+
         <p><strong>Subject:</strong> ${note.subject || "(no subject)"}</p>
         <p><strong>From:</strong> ${note.from_name || ""} (${note.from_email || ""})</p>
         <p><strong>Created:</strong> ${new Date(note.created_at).toLocaleString()}</p>
@@ -754,6 +761,11 @@ async function renderNoteReview() {
           <summary style="cursor:pointer; font-weight:600;">▼ Raw Text (click to expand)</summary>
           <pre style="white-space:pre-wrap; margin-top:8px;">${note.raw_text || ""}</pre>
         </details>
+
+        <div id="setClientForm" style="display:none; margin-top:12px;">
+          <input type="text" id="clientSearchInput" placeholder="Search contacts..." style="width:100%; padding:8px;" />
+          <div id="clientSearchResults" style="margin-top:8px;"></div>
+        </div>
       </div>
     `;
 
@@ -786,11 +798,65 @@ async function renderNoteReview() {
         </div>
       `;
     }
+
+    // Wire up search input
+    setTimeout(() => {
+      const input = document.getElementById("clientSearchInput");
+      if (input) {
+        input.addEventListener("input", async (e) => {
+          const query = e.target.value.trim();
+          if (!query) return;
+
+          const res = await fetch(`https://notes-history-module.dennis-e64.workers.dev?project=${encodeURIComponent(activeProject)}&table=contacts&or=(name.ilike.*${query}*,email.ilike.*${query}*)`);
+          const data = await res.json();
+          const results = data.notes || [];
+
+          const container = document.getElementById("clientSearchResults");
+          container.innerHTML = results.map(c => `
+            <div style="padding:8px; border-bottom:1px solid #eee; cursor:pointer;" onclick="attachClientToNote('${c.id}', '${c.name}', '${c.type}')">
+              <strong>${c.name}</strong><br/><small>${c.email}</small>
+            </div>
+          `).join("");
+        });
+      }
+    }, 100);
   } catch (err) {
     content.innerHTML = `<div class="card">Error loading note: ${err.message}</div>`;
   }
 }
 
+function openSetClientForm() {
+  document.getElementById("setClientForm").style.display = "block";
+  document.getElementById("clientSearchInput").focus();
+}
+
+async function attachClientToNote(contactId, contactName, contactType) {
+  await fetch(`https://notes-history-module.dennis-e64.workers.dev?project=${encodeURIComponent(activeProject)}&id=eq.${selectedNoteId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      client_contact_id: contactId,
+      client_contact_name: contactName,
+      client_contact_type: contactType,
+      updated_at: new Date().toISOString()
+    })
+  });
+
+  document.getElementById("setClientForm").style.display = "none";
+  renderNoteReview();
+}
+
+async function deleteNote() {
+  if (!confirm("Are you sure you want to delete this note?")) return;
+
+  await fetch(`https://notes-history-module.dennis-e64.workers.dev?project=${encodeURIComponent(activeProject)}&id=eq.${selectedNoteId}`, {
+    method: "DELETE"
+  });
+
+  selectedNoteId = null;
+  renderNoteReview();
+  renderNoteHistory();
+}
 
 
 async function renderNoteRelationships() {
