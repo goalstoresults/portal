@@ -184,7 +184,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.2.19</span>
+      <span class="muted" style="margin-left:12px;">v1.2.20</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -671,7 +671,6 @@ function renderNotesTable(notes) {
       <td>${note.needs_review ? "Yes" : "No"}</td>
       <td>
         <button onclick="reviewNote('${note.id}')">Review</button>
-        <button class="danger" onclick="deleteNote('${note.id}')">Delete</button>
       </td>
     `;
     tableBody.appendChild(row);
@@ -741,13 +740,12 @@ async function renderNoteReview() {
 
     content.innerHTML = `
       <div class="card">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <h3>Note Review</h3>
-          <div>
-            <button onclick="openSetClientForm()" style="margin-right:8px;">Set Client</button>
-            <button onclick="deleteNote()" style="background:#f44336; color:white;">Delete</button>
-          </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <h3 style="margin:0;">Note Review</h3>
+          <button onclick="openSetClientForm()">Set Client</button>
+          <button onclick="deleteNote()" class="danger">Delete</button>
         </div>
+
 
         <p><strong>Subject:</strong> ${note.subject || "(no subject)"}</p>
         <p><strong>From:</strong> ${note.from_name || ""} (${note.from_email || ""})</p>
