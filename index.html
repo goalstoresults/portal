@@ -743,35 +743,6 @@ content.innerHTML = `
       <summary style="cursor:pointer; font-weight:600;">▼ Raw Text (click to expand)</summary>
       <pre style="white-space:pre-wrap; margin-top:8px;">${note.raw_text || ""}</pre>
     </details>
-    if (Array.isArray(relationships) && relationships.length > 0) {
-  content.innerHTML += `
-    <div class="card">
-      <h4>Participants Detected in Note</h4>
-      <table style="width:100%; border-collapse:collapse;">
-        <thead style="background:#f0f0f0;">
-          <tr>
-            <th style="text-align:left; padding:8px;">Raw Name</th>
-            <th style="text-align:left; padding:8px;">AI First</th>
-            <th style="text-align:left; padding:8px;">AI Last</th>
-            <th style="text-align:left; padding:8px;">Role/Type</th>
-            <th style="text-align:left; padding:8px;">Context</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${relationships.map(r => `
-            <tr>
-              <td style="padding:8px;">${r.raw_name || ""}</td>
-              <td style="padding:8px;">${r.ai_first || ""}</td>
-              <td style="padding:8px;">${r.ai_last || ""}</td>
-              <td style="padding:8px;">${r.role_type || ""}</td>
-              <td style="padding:8px;">${r.context || ""}</td>
-            </tr>
-          `).join("")}
-        </tbody>
-      </table>
-    </div>
-  `;
-}
 
   </div>
 `;
