@@ -725,8 +725,8 @@ async function renderNoteReview() {
     const note = data.notes.find(n => n.id === selectedNoteId);
     if (!note) throw new Error("Note not found");
 
-    //const relRes = await fetch(`${API_BASE}/note_relationships?note_id=eq.${selectedNoteId}&project=eq.${activeProject}`);
-    //const relationships = await relRes.json();
+    const relRes = await fetch(`${API_BASE}/note_relationships?note_id=eq.${selectedNoteId}&project=eq.${activeProject}`);
+    const relationships = await relRes.json();
 
 content.innerHTML = `
   <div class="card">
