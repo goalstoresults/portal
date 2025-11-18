@@ -184,7 +184,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.2.15</span>
+      <span class="muted" style="margin-left:12px;">v1.2.16</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -725,6 +725,20 @@ async function renderNoteReview() {
 
     const note = data.notes.find(n => n.id === selectedNoteId);
     if (!note) throw new Error("Note not found");
+
+    let relationships = [];
+try {
+  const relRes = await fetch(
+    `https://notes-history-module.dennis-e64.workers.dev?project=${encodeURIComponent(activeProject)}&note_id=eq.${selectedNoteId}&table=notes_relationships`
+  );
+  const relData = await relRes.json();
+  if (relData.status === "ok" && Array.isArray(relData.notes)) {
+    relationships = relData.notes;
+  }
+} catch (err) {
+  console.warn("Failed to load relationships:", err);
+}
+
 
     content.innerHTML = `
       <div class="card">
