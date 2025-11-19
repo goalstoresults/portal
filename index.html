@@ -184,7 +184,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.2.33</span>
+      <span class="muted" style="margin-left:12px;">v1.3.0</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -875,16 +875,16 @@ async function findClientContacts() {
 
   const rows = await res.json();
   const container = document.getElementById('clientSearchResults');
-  container.innerHTML = rows.length > 0
-    ? rows.map(r => `
-      <div style="padding:8px; border-bottom:1px solid #eee; cursor:pointer;"
-           onclick="attachClientToNote('${r.contact_id}', '${(r.first_name || '')} ${(r.last_name || '')}', '${r.type || ''}')">
-        <strong>${r.first_name || ''} ${r.last_name || ''}</strong><br/><small>${r.email || ''}</small>
-      </div>
-    `).join('')
-    : `<div class="muted">No contacts found.</div>`;
-}
 
+  container.innerHTML = rows.length > 0
+  ? rows.map(r => `
+    <div style="padding:8px; border-bottom:1px solid #eee; cursor:pointer;"
+         onclick="attachClientToNote('${r.contact_id}', '${r.first_name || ''} ${r.last_name || ''}', 'contact')">
+      <strong>${r.first_name || ''} ${r.last_name || ''}</strong><br/><small>${r.email || ''}</small>
+    </div>
+  `).join('')
+  : `<div class="muted">No contacts found.</div>`;
+  }
 
 
 
