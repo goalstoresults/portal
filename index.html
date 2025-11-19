@@ -184,7 +184,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.3.6</span>
+      <span class="muted" style="margin-left:12px;">v1.3.7</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -850,28 +850,26 @@ async function findClientContacts() {
     return;
   }
 
-  const params = new URLSearchParams({ project: activeProject });
+  const params = new URLSearchParams();
 
   // Build flexible filter
   if (email) {
+    params.set('project', activeProject);
     params.set('email', `ilike.*${email}*`);
   } else {
-    const filters = [];
+    const filters = [`project.eq.${activeProject}`];
     if (first) filters.push(`first_name.ilike.*${first}*`);
     if (last)  filters.push(`last_name.ilike.*${last}*`);
 
     if (filters.length > 1) {
-      // Require BOTH first and last name to match
       params.set('and', `(${filters.join(',')})`);
-    } else if (filters.length === 1) {
-      // Single filter, just set it directly
+    } else {
       const [filter] = filters;
       const [key, operator, value] = filter.split('.');
       params.set(`${key}.${operator}`, value);
     }
   }
 
-  // Ensure type is selected
   const url = `${API_BASE}/contacts?${params.toString()}&select=contact_id,first_name,last_name,email,type`;
   console.log('Contacts fetch (Note Review):', url);
 
