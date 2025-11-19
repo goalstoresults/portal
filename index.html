@@ -184,7 +184,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.2.25</span>
+      <span class="muted" style="margin-left:12px;">v1.2.26</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -839,28 +839,23 @@ async function findClientContacts() {
   const last = document.getElementById('filter-last').value.trim();
   const email = document.getElementById('filter-email').value.trim();
 
-  // Validate input
+  // Logic: email OR (first AND last)
   if (email) {
     if (email.length < 3) {
       alert('Email must be at least 3 characters.');
       return;
     }
   } else {
-    if (!first || !last) {
-      alert('Both first and last name are required if email is not provided.');
-      return;
-    }
-    if (first.length < 3 || last.length < 3) {
-      alert('First and last name must be at least 3 characters.');
+    if (!first || !last || first.length < 3 || last.length < 3) {
+      alert('Both first and last name must be at least 3 characters.');
       return;
     }
   }
 
-  // Build query
   const base = `project=${encodeURIComponent(activeProject)}&table=contacts`;
   const filter = email
-    ? `email.ilike.*${email}*`
-    : `and=(first_name.ilike.*${first}*,last_name.ilike.*${last}*)`;
+    ? `email=ilike.*${email}*`
+    : `first_name=ilike.*${first}*&last_name=ilike.*${last}*`;
 
   const url = `https://notes-history-module.dennis-e64.workers.dev?${base}&${filter}`;
   console.log("Contacts fetch:", url);
