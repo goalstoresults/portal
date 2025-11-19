@@ -771,6 +771,8 @@ async function renderNoteReview() {
           <pre style="white-space:pre-wrap; margin-top:8px;">${note.raw_text || ""}</pre>
         </details>
 
+    `;
+
     if (relationships.length > 0) {
       content.innerHTML += `
         <div class="card" style="margin-top:16px;">
