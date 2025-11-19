@@ -184,7 +184,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.3.3</span>
+      <span class="muted" style="margin-left:12px;">v1.3.4</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -839,28 +839,36 @@ async function findClientContacts() {
   const last = document.getElementById('filter-last').value.trim();
   const email = document.getElementById('filter-email').value.trim();
 
-  // Email OR (first AND last)
+  // Validate input
   if (email) {
     if (email.length < 3) {
       alert('Email must be at least 3 characters.');
       return;
     }
-  } else {
-    if (!first || !last || first.length < 3 || last.length < 3) {
-      alert('Both first and last name must be at least 3 characters.');
-      return;
-    }
+  } else if (!first && !last) {
+    alert('Enter at least a first or last name.');
+    return;
   }
 
   const params = new URLSearchParams({ project: activeProject });
+
+  // Build flexible filter
   if (email) {
-    params.set('email', email);
+    params.set('email', `ilike.*${email}*`);
   } else {
-    params.set('first_name', first);
-    params.set('last_name', last);
+    const filters = [];
+    if (first) filters.push(`first_name.ilike.*${first}*`);
+    if (last) filters.push(`last_name.ilike.*${last}*`);
+    if (filters.length > 1) {
+      params.set('or', `(${filters.join(',')})`);
+    } else {
+      const [single] = filters;
+      const [key, value] = single.split('=');
+      params.set(key, value);
+    }
   }
 
-  // Ensure type is included in the response
+  // Ensure type is selected
   const url = `${API_BASE}/contacts?${params.toString()}&select=contact_id,first_name,last_name,email,type`;
   console.log('Contacts fetch (Note Review):', url);
 
@@ -884,7 +892,7 @@ async function findClientContacts() {
   container.innerHTML = rows.length > 0
     ? rows.map(r => {
         const fullName = `${r.first_name || ''} ${r.last_name || ''}`.trim();
-        const typeLabel = (r.type || 'contact').toLowerCase();
+        const typeLabel = r.type ? r.type.toLowerCase() : 'contact';
 
         return `
           <div style="padding:8px; border-bottom:1px solid #eee; cursor:pointer;"
@@ -899,6 +907,7 @@ async function findClientContacts() {
       }).join('')
     : `<div class="muted">No contacts found.</div>`;
 }
+
 
   
 async function attachClientToNote(contactId, contactName, contactType) {
