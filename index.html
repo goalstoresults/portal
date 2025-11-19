@@ -184,7 +184,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.2.20</span>
+      <span class="muted" style="margin-left:12px;">v1.2.21</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -740,12 +740,11 @@ async function renderNoteReview() {
 
     content.innerHTML = `
       <div class="card">
-        <div style="display:flex; align-items:center; gap:8px;">
-          <h3 style="margin:0;">Note Review</h3>
-          <button onclick="openSetClientForm()">Set Client</button>
-          <button onclick="deleteNote()" class="danger">Delete</button>
-        </div>
-
+      <div style="display:flex; align-items:center; gap:8px;">
+      <h3 style="margin:0;">Note Review</h3>
+      <button onclick="toggleSetClientForm()">Set Client</button>
+      <button onclick="deleteNote()" class="danger">Delete</button>
+      </div>
 
         <p><strong>Subject:</strong> ${note.subject || "(no subject)"}</p>
         <p><strong>From:</strong> ${note.from_name || ""} (${note.from_email || ""})</p>
@@ -823,6 +822,59 @@ async function renderNoteReview() {
   }
 }
 
+function toggleSetClientForm() {
+  const form = document.getElementById("setClientForm");
+  form.style.display = form.style.display === "none" ? "block" : "none";
+}
+
+async function findClientContacts() {
+  const first = document.getElementById('filter-first').value.trim();
+  const last = document.getElementById('filter-last').value.trim();
+  const email = document.getElementById('filter-email').value.trim();
+
+  if (email && email.length < 3) return alert('Email must be at least 3 characters.');
+  if (!email && (!first || !last || first.length < 3 || last.length < 3)) {
+    return alert('First and last name must be at least 3 characters.');
+  }
+
+  let query = `project=${encodeURIComponent(activeProject)}`;
+  if (email) {
+    query += `&email=${encodeURIComponent(email)}`;
+  } else {
+    query += `&first_name=${encodeURIComponent(first)}&last_name=${encodeURIComponent(last)}`;
+  }
+
+  const res = await fetch(`https://client-portal-api.dennis-e64.workers.dev/api/contacts?${query}`);
+  const rows = await res.json();
+
+  const container = document.getElementById("clientSearchResults");
+  container.innerHTML = rows.length > 0
+    ? rows.map(r => `
+      <div style="padding:8px; border-bottom:1px solid #eee; cursor:pointer;" onclick="attachClientToNote('${r.contact_id}', '${r.first_name} ${r.last_name}', '${r.type}')">
+        <strong>${r.first_name} ${r.last_name}</strong><br/><small>${r.email}</small>
+      </div>
+    `).join("")
+    : `<div class="muted">No contacts found.</div>`;
+}
+
+async function attachClientToNote(contactId, contactName, contactType) {
+  await fetch(`https://notes-history-module.dennis-e64.workers.dev?project=${encodeURIComponent(activeProject)}&id=eq.${selectedNoteId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      client_contact_id: contactId,
+      client_contact_name: contactName,
+      client_contact_type: contactType,
+      updated_at: new Date().toISOString()
+    })
+  });
+
+  document.getElementById("setClientForm").style.display = "none";
+  renderNoteReview();
+}
+
+
+  
 function openSetClientForm() {
   document.getElementById("setClientForm").style.display = "block";
   document.getElementById("clientSearchInput").focus();
