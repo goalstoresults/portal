@@ -893,20 +893,40 @@ async function findClientContacts() {
 
   
 async function attachClientToNote(contactId, contactName, contactType) {
-  await fetch(`https://notes-history-module.dennis-e64.workers.dev?project=${encodeURIComponent(activeProject)}&id=eq.${selectedNoteId}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      client_contact_id: contactId,
-      client_contact_name: contactName,
-      client_contact_type: contactType,
-      updated_at: new Date().toISOString()
-    })
-  });
+  try {
+    const res = await fetch(
+      `https://notes-history-module.dennis-e64.workers.dev?project=${encodeURIComponent(activeProject)}&id=eq.${selectedNoteId}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          client_contact_id: contactId,
+          client_contact_name: contactName,
+          client_contact_type: contactType,
+          updated_at: new Date().toISOString()
+        })
+      }
+    );
 
-  document.getElementById("setClientForm").style.display = "none";
-  renderNoteReview();
+    if (!res.ok) {
+      const msg = await res.text().catch(() => "");
+      alert(`❌ Failed to attach client (${res.status}). ${msg}`);
+      console.error("Attach client error:", msg);
+      return;
+    }
+
+    // Success — give reviewer immediate confirmation
+    alert(`✅ Client set: ${contactName} (${contactType})`);
+
+    // Hide the search form and reload the note review
+    document.getElementById("setClientForm").style.display = "none";
+    await renderNoteReview();
+  } catch (err) {
+    alert("❌ Network error attaching client");
+    console.error("Attach client exception:", err);
+  }
 }
+
 
 
   
