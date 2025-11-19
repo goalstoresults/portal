@@ -184,7 +184,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.2.23</span>
+      <span class="muted" style="margin-left:12px;">v1.2.24</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -844,26 +844,45 @@ async function findClientContacts() {
     return alert('First and last name must be at least 3 characters.');
   }
 
-  let query = `project=${encodeURIComponent(activeProject)}`;
+  // Build query for notes-history-module contacts search
+  const params = new URLSearchParams();
+  params.set("project", activeProject);
+  params.set("table", "contacts");
   if (email) {
-    query += `&email=${encodeURIComponent(email)}`;
+    params.set("email", email);
   } else {
-    query += `&first_name=${encodeURIComponent(first)}&last_name=${encodeURIComponent(last)}`;
+    params.set("first_name", first);
+    params.set("last_name", last);
   }
 
-  const res = await fetch(`https://client-portal-api.dennis-e64.workers.dev/api/contacts?${query}`);
-  const rows = await res.json();
+  const url = `https://notes-history-module.dennis-e64.workers.dev?${params.toString()}`;
+  console.log("Contacts fetch:", url);
 
+  const res = await fetch(url);
+  if (!res.ok) {
+    const msg = await res.text().catch(() => "");
+    alert(`Contacts search failed (${res.status}). ${msg || ""}`);
+    return;
+  }
+
+  const data = await res.json();
+  const rows = Array.isArray(data.notes) ? data.notes : (Array.isArray(data) ? data : []);
   const container = document.getElementById("clientSearchResults");
+
   container.innerHTML = rows.length > 0
     ? rows.map(r => `
-      <div style="padding:8px; border-bottom:1px solid #eee; cursor:pointer;" onclick="attachClientToNote('${r.contact_id}', '${r.first_name} ${r.last_name}', '${r.type}')">
-        <strong>${r.first_name} ${r.last_name}</strong><br/><small>${r.email}</small>
+      <div style="padding:8px; border-bottom:1px solid #eee; cursor:pointer;"
+           onclick="attachClientToNote('${r.contact_id || r.id}', '${(r.first_name || '')} ${(r.last_name || '')}', '${r.type || r.contact_type || ''}')">
+        <strong>${(r.first_name || '')} ${(r.last_name || '')}</strong><br/>
+        <small>${r.email || ''}</small>
       </div>
     `).join("")
     : `<div class="muted">No contacts found.</div>`;
 }
 
+
+
+  
 async function attachClientToNote(contactId, contactName, contactType) {
   await fetch(`https://notes-history-module.dennis-e64.workers.dev?project=${encodeURIComponent(activeProject)}&id=eq.${selectedNoteId}`, {
     method: "PATCH",
