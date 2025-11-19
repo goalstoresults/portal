@@ -184,7 +184,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.3.4</span>
+      <span class="muted" style="margin-left:12px;">v1.3.5</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -858,13 +858,16 @@ async function findClientContacts() {
   } else {
     const filters = [];
     if (first) filters.push(`first_name.ilike.*${first}*`);
-    if (last) filters.push(`last_name.ilike.*${last}*`);
+    if (last)  filters.push(`last_name.ilike.*${last}*`);
+
     if (filters.length > 1) {
+      // Match either first OR last name
       params.set('or', `(${filters.join(',')})`);
-    } else {
-      const [single] = filters;
-      const [key, value] = single.split('=');
-      params.set(key, value);
+    } else if (filters.length === 1) {
+      // Single filter, just set it directly
+      const [filter] = filters;
+      const [key, operator, value] = filter.split('.');
+      params.set(`${key}.${operator}`, value);
     }
   }
 
