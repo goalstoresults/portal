@@ -184,7 +184,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.3.0</span>
+      <span class="muted" style="margin-left:12px;">v1.3.1</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -856,7 +856,8 @@ async function findClientContacts() {
     params.set('last_name', last);
   }
 
-  const url = `${API_BASE}/contacts?${params.toString()}`;
+  // 👇 explicitly select type so it comes back
+  const url = `${API_BASE}/contacts?${params.toString()}&select=contact_id,first_name,last_name,email,type`;
   console.log('Contacts fetch (Note Review):', url);
 
   let res;
@@ -875,16 +876,18 @@ async function findClientContacts() {
 
   const rows = await res.json();
   const container = document.getElementById('clientSearchResults');
-
   container.innerHTML = rows.length > 0
-  ? rows.map(r => `
-    <div style="padding:8px; border-bottom:1px solid #eee; cursor:pointer;"
-         onclick="attachClientToNote('${r.contact_id}', '${r.first_name || ''} ${r.last_name || ''}', 'contact')">
-      <strong>${r.first_name || ''} ${r.last_name || ''}</strong><br/><small>${r.email || ''}</small>
-    </div>
-  `).join('')
-  : `<div class="muted">No contacts found.</div>`;
-  }
+    ? rows.map(r => `
+      <div style="padding:8px; border-bottom:1px solid #eee; cursor:pointer;"
+           onclick="attachClientToNote('${r.contact_id}', '${(r.first_name || '')} ${(r.last_name || '')}', '${r.type || ''}')">
+        <strong>${r.first_name || ''} ${r.last_name || ''}</strong>
+        <span class="muted">(${r.type || 'contact'})</span><br/>
+        <small>${r.email || ''}</small>
+      </div>
+    `).join('')
+    : `<div class="muted">No contacts found.</div>`;
+}
+
 
 
 
