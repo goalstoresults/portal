@@ -184,7 +184,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.2.31</span>
+      <span class="muted" style="margin-left:12px;">v1.2.32</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -846,16 +846,16 @@ async function findClientContacts() {
       return;
     }
   } else {
-    if (!first || !last || first.length < 3 || last.length < 3) {
-      alert('Both first and last name must be at least 3 characters.');
+    if (!first || !last) {
+      alert('Both first and last name are required if email is not provided.');
       return;
     }
   }
 
   const base = `project=${encodeURIComponent(activeProject)}&table=contacts`;
   const filter = email
-    ? `email=ilike.${encodeURIComponent(email)}%`
-    : `first_name=ilike.${encodeURIComponent(first)}%&last_name=ilike.${encodeURIComponent(last)}%`;
+    ? `email=eq.${encodeURIComponent(email)}`
+    : `first_name=eq.${encodeURIComponent(first)}&last_name=eq.${encodeURIComponent(last)}`;
 
   const url = `https://notes-history-module.dennis-e64.workers.dev?${base}&${filter}`;
   console.log("Contacts fetch:", url);
