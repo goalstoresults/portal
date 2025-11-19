@@ -184,7 +184,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.2.24</span>
+      <span class="muted" style="margin-left:12px;">v1.2.25</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -839,46 +839,47 @@ async function findClientContacts() {
   const last = document.getElementById('filter-last').value.trim();
   const email = document.getElementById('filter-email').value.trim();
 
-  if (email && email.length < 3) return alert('Email must be at least 3 characters.');
-  if (!email && (!first || !last || first.length < 3 || last.length < 3)) {
-    return alert('First and last name must be at least 3 characters.');
-  }
-
-  // Build query for notes-history-module contacts search
-  const params = new URLSearchParams();
-  params.set("project", activeProject);
-  params.set("table", "contacts");
+  // Validate input
   if (email) {
-    params.set("email", email);
+    if (email.length < 3) {
+      alert('Email must be at least 3 characters.');
+      return;
+    }
   } else {
-    params.set("first_name", first);
-    params.set("last_name", last);
+    if (!first || !last) {
+      alert('Both first and last name are required if email is not provided.');
+      return;
+    }
+    if (first.length < 3 || last.length < 3) {
+      alert('First and last name must be at least 3 characters.');
+      return;
+    }
   }
 
-  const url = `https://notes-history-module.dennis-e64.workers.dev?${params.toString()}`;
+  // Build query
+  const base = `project=${encodeURIComponent(activeProject)}&table=contacts`;
+  const filter = email
+    ? `email.ilike.*${email}*`
+    : `and=(first_name.ilike.*${first}*,last_name.ilike.*${last}*)`;
+
+  const url = `https://notes-history-module.dennis-e64.workers.dev?${base}&${filter}`;
   console.log("Contacts fetch:", url);
 
   const res = await fetch(url);
-  if (!res.ok) {
-    const msg = await res.text().catch(() => "");
-    alert(`Contacts search failed (${res.status}). ${msg || ""}`);
-    return;
-  }
-
   const data = await res.json();
-  const rows = Array.isArray(data.notes) ? data.notes : (Array.isArray(data) ? data : []);
-  const container = document.getElementById("clientSearchResults");
+  const rows = Array.isArray(data.notes) ? data.notes : [];
 
+  const container = document.getElementById("clientSearchResults");
   container.innerHTML = rows.length > 0
     ? rows.map(r => `
       <div style="padding:8px; border-bottom:1px solid #eee; cursor:pointer;"
-           onclick="attachClientToNote('${r.contact_id || r.id}', '${(r.first_name || '')} ${(r.last_name || '')}', '${r.type || r.contact_type || ''}')">
-        <strong>${(r.first_name || '')} ${(r.last_name || '')}</strong><br/>
-        <small>${r.email || ''}</small>
+           onclick="attachClientToNote('${r.contact_id || r.id}', '${r.first_name || ''} ${r.last_name || ''}', '${r.type || ''}')">
+        <strong>${r.first_name || ''} ${r.last_name || ''}</strong><br/><small>${r.email || ''}</small>
       </div>
     `).join("")
     : `<div class="muted">No contacts found.</div>`;
 }
+
 
 
 
