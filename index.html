@@ -184,7 +184,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.2.27</span>
+      <span class="muted" style="margin-left:12px;">v1.2.28</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -839,40 +839,127 @@ async function findClientContacts() {
   const last = document.getElementById('filter-last').value.trim();
   const email = document.getElementById('filter-email').value.trim();
 
-  // Logic: email OR (first AND last)
+  // Debug: snapshot inputs and project
+  console.group("findClientContacts()");
+  console.log("Inputs:", { project: activeProject, first, last, email });
+
+  // Validate logic: email OR (first AND last)
   if (email) {
     if (email.length < 3) {
       alert('Email must be at least 3 characters.');
+      console.warn("Validation failed: email too short");
+      console.groupEnd();
       return;
     }
   } else {
     if (!first || !last || first.length < 3 || last.length < 3) {
       alert('Both first and last name must be at least 3 characters.');
+      console.warn("Validation failed: name fields");
+      console.groupEnd();
       return;
     }
   }
 
-  const base = `project=${encodeURIComponent(activeProject)}&table=contacts`;
-  const filter = email
-    ? `email=ilike.*${encodeURIComponent(email)}*`
-    : `first_name=ilike.*${encodeURIComponent(first)}*&last_name=ilike.*${encodeURIComponent(last)}*`;
+  // Guard activeProject
+  if (!activeProject || typeof activeProject !== "string") {
+    alert("Project is not set. Refresh or select a project.");
+    console.error("activeProject invalid:", activeProject);
+    console.groupEnd();
+    return;
+  }
 
-  const url = `https://notes-history-module.dennis-e64.workers.dev?${base}&${filter}`;
-  console.log("Contacts fetch:", url);
+  // Build URL against notes-history-module
+  const base = new URL("https://notes-history-module.dennis-e64.workers.dev");
+  const params = base.searchParams;
+  params.set("project", activeProject);
+  params.set("table", "contacts");
+  if (email) {
+    // Email-only filter with ilike wildcard
+    params.set("email", `ilike.*${email}*`);
+  } else {
+    // Require both first and last, both ilike wildcards
+    params.set("first_name", `ilike.*${first}*`);
+    params.set("last_name", `ilike.*${last}*`);
+  }
 
-  const res = await fetch(url);
-  const data = await res.json();
-  const rows = Array.isArray(data.notes) ? data.notes : [];
+  const url = base.toString();
+  console.log("Fetch URL:", url);
 
+  // Show the URL in the UI for quick verification
+  const debugPanelId = "clientSearchDebug";
+  let debugPanel = document.getElementById(debugPanelId);
+  if (!debugPanel) {
+    const container = document.getElementById("clientSearchResults");
+    const panel = document.createElement("div");
+    panel.id = debugPanelId;
+    panel.className = "card";
+    panel.style.marginBottom = "8px";
+    container.parentNode.insertBefore(panel, container);
+    debugPanel = panel;
+  }
+  debugPanel.innerHTML = `
+    <div><strong>Request preview:</strong> <code>${url}</code></div>
+    <div class="muted">Project: ${activeProject} | First: ${first} | Last: ${last} | Email: ${email}</div>
+  `;
+
+  // Fetch with full diagnostics
+  let res, rawText, json;
+  try {
+    res = await fetch(url);
+    console.log("Response status:", res.status);
+    rawText = await res.text();
+    console.log("Raw response text:", rawText.slice(0, 500));
+    try {
+      json = JSON.parse(rawText);
+    } catch (e) {
+      console.warn("JSON parse failed:", e);
+    }
+  } catch (err) {
+    console.error("Fetch error:", err);
+    alert("Contacts search failed (network error). Check console for details.");
+    console.groupEnd();
+    return;
+  }
+
+  // Display diagnostics in UI
+  debugPanel.innerHTML += `
+    <div><strong>Status:</strong> ${res.status}</div>
+    <div><strong>Raw text (first 300 chars):</strong> <pre style="white-space:pre-wrap;">${rawText.slice(0, 300)}</pre></div>
+  `;
+
+  // Normalize rows
+  const rows = Array.isArray(json?.notes) ? json.notes
+             : Array.isArray(json) ? json
+             : [];
+
+  console.log("Parsed rows count:", rows.length);
+  if (rows.length) {
+    console.table(rows.slice(0, 10).map(r => ({
+      contact_id: r.contact_id ?? r.id,
+      first_name: r.first_name,
+      last_name: r.last_name,
+      email: r.email
+    })));
+  }
+
+  // Render results
   const container = document.getElementById("clientSearchResults");
   container.innerHTML = rows.length > 0
     ? rows.map(r => `
       <div style="padding:8px; border-bottom:1px solid #eee; cursor:pointer;"
-           onclick="attachClientToNote('${r.contact_id || r.id}', '${r.first_name || ''} ${r.last_name || ''}', '${r.type || ''}')">
+           onclick="attachClientToNote('${r.contact_id ?? r.id}', '${(r.first_name || '')} ${(r.last_name || '')}', '${r.type || r.contact_type || ''}')">
         <strong>${r.first_name || ''} ${r.last_name || ''}</strong><br/><small>${r.email || ''}</small>
       </div>
     `).join("")
     : `<div class="muted">No contacts found.</div>`;
+
+  // Result summary in debug
+  debugPanel.innerHTML += `
+    <div><strong>Result count:</strong> ${rows.length}</div>
+    ${rows.length ? `<div class="muted">First IDs: ${rows.slice(0,3).map(r => r.contact_id ?? r.id).join(", ")}</div>` : ""}
+  `;
+
+  console.groupEnd();
 }
 
 
