@@ -184,7 +184,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.2.29</span>
+      <span class="muted" style="margin-left:12px;">v1.2.30</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -854,8 +854,8 @@ async function findClientContacts() {
 
   const base = `project=${encodeURIComponent(activeProject)}&table=contacts`;
   const filter = email
-    ? `email.ilike.*${encodeURIComponent(email)}*`
-    : `and=(first_name.ilike.*${encodeURIComponent(first)}*,last_name.ilike.*${encodeURIComponent(last)}*)`;
+    ? `email=ilike.${encodeURIComponent(email)}%`
+    : `first_name=ilike.${encodeURIComponent(first)}%&last_name=ilike.${encodeURIComponent(last)}%`;
 
   const url = `https://notes-history-module.dennis-e64.workers.dev?${base}&${filter}`;
   console.log("Contacts fetch:", url);
@@ -874,6 +874,7 @@ async function findClientContacts() {
     `).join("")
     : `<div class="muted">No contacts found.</div>`;
 }
+
 
 
 
