@@ -184,7 +184,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.3.13</span>
+      <span class="muted" style="margin-left:12px;">v1.3.14</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -1052,7 +1052,7 @@ async function renderNoteRelationships() {
 function renderNoteRelationshipGrid(noteRows, globalRels, clientId) {
   const container = document.getElementById('noteRelationshipsGrid');
 
-  // Header row
+  // Start with header row
   container.innerHTML = `
     <div class="grid-header">
       <div class="cell">First Name</div>
@@ -1065,7 +1065,7 @@ function renderNoteRelationshipGrid(noteRows, globalRels, clientId) {
     </div>
   `;
 
-  // Data rows
+  // Add data rows
   container.innerHTML += noteRows.map(r => {
     const exists = globalRels.some(g =>
       (g.source_contact_id === clientId && g.related_contact_id === r.contact_id) ||
@@ -1087,6 +1087,7 @@ function renderNoteRelationshipGrid(noteRows, globalRels, clientId) {
     `;
   }).join('');
 }
+
 
 
 function renderContactRelationshipGrid(rows) {
