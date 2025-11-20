@@ -184,7 +184,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.3.28</span>
+      <span class="muted" style="margin-left:12px;">v1.3.29</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -371,14 +371,21 @@ async function loadTab(id) {
   }
 }
 
-async function loadSubtab(tabKey, subId) {
+ async function loadSubtab(tabKey, subId) {
   activeSubtab = subId;
   setActiveSubtabButton(subId);
+
   if (tabKey === 'notes') {
     if (subId === 'add') await renderAddNoteForm();
     if (subId === 'history') await renderNoteHistory();
     if (subId === 'review') await renderNoteReview();
-    if (subId === 'relationships') await renderNoteRelationships();
+    if (subId === 'relationships') {
+      if (selectedNoteId && currentClientId) {
+        await renderNoteRelationships(selectedNoteId, currentClientId);
+      } else {
+        document.getElementById('content').innerHTML = `<div class="card">❌ No note selected. Use Note Review first.</div>`;
+      }
+    }
   }
 }
 
