@@ -184,7 +184,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.3.16</span>
+      <span class="muted" style="margin-left:12px;">v1.3.17</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -1048,8 +1048,7 @@ async function renderNoteRelationships() {
 function renderNoteRelationshipGrid(noteRows, globalRels, clientId) {
   const container = document.getElementById('noteRelationshipsGrid');
 
-  // Build table header
-  let html = `
+  container.innerHTML = `
     <table class="table table-striped">
       <thead>
         <tr>
@@ -1063,36 +1062,22 @@ function renderNoteRelationshipGrid(noteRows, globalRels, clientId) {
         </tr>
       </thead>
       <tbody>
-  `;
-
-  // Build table rows
-  html += noteRows.map(r => {
-    const exists = globalRels.some(g =>
-      (g.source_contact_id === clientId && g.related_contact_id === r.contact_id) ||
-      (g.related_contact_id === clientId && g.source_contact_id === r.contact_id)
-    );
-
-    return `
-      <tr data-id="${r.id}" data-contact-id="${r.contact_id}">
-        <td><input class="first-name form-control" value="${r.first_name || ''}" /></td>
-        <td><input class="last-name form-control" value="${r.last_name || ''}" /></td>
-        <td>${r.contact_type || ''}</td>
-        <td>${r.context || ''}</td>
-        <td><input class="rel-type form-control" value="${r.relationship_type || ''}" placeholder="Type" /></td>
-        <td><input class="rel-level form-control" value="${r.relationship_level || ''}" placeholder="Level" /></td>
-        <td><input type="checkbox" class="promote-checkbox" ${exists ? 'disabled' : ''}/></td>
-      </tr>
-    `;
-  }).join('');
-
-  // Close table
-  html += `
+        ${noteRows.map(r => `
+          <tr data-id="${r.id}" data-contact-id="${r.contact_id || ''}">
+            <td><input class="first-name form-control" value="${r.first_name_ai || ''}" /></td>
+            <td><input class="last-name form-control" value="${r.last_name_ai || ''}" /></td>
+            <td>${r.role_label_ai || ''}</td>
+            <td>${r.context_description_ai || ''}</td>
+            <td><input class="rel-type form-control" value="${r.relationship_type || ''}" /></td>
+            <td><input class="rel-level form-control" value="${r.relationship_level || ''}" /></td>
+            <td><input type="checkbox" class="promote-checkbox" /></td>
+          </tr>
+        `).join('')}
       </tbody>
     </table>
   `;
-
-  container.innerHTML = html;
 }
+
 
 
 
