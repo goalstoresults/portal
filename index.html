@@ -184,7 +184,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.3.21</span>
+      <span class="muted" style="margin-left:12px;">v1.3.22</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -1034,26 +1034,18 @@ function renderNoteRelationshipGrid(noteRows, types, roles, clientId) {
           <tr>
             <th>First Name</th>
             <th>Last Name</th>
-            <th>Role Type</th>
             <th>Context</th>
             <th>Relationship Type</th>
-            <th>Relationship Level</th>
+            <th>Relationship Role</th>
             <th>Email</th>
             <th>Promote</th>
           </tr>
         </thead>
         <tbody>
           ${noteRows.map(r => `
-            <tr data-id="${r.id}">
+            <tr data-id="${r.id}" data-contact-id="${r.contact_id || ''}">
               <td><input class="first-name" value="${r.first_name_ai || ''}" /></td>
               <td><input class="last-name" value="${r.last_name_ai || ''}" /></td>
-              <td>
-                <select class="rel-role">
-                  ${safeRoles.map(role => `
-                    <option value="${role}" ${r.role_label_ai === role ? 'selected' : ''}>${role}</option>
-                  `).join('')}
-                </select>
-              </td>
               <td>${r.context_description_ai || ''}</td>
               <td>
                 <select class="rel-type">
@@ -1062,7 +1054,13 @@ function renderNoteRelationshipGrid(noteRows, types, roles, clientId) {
                   `).join('')}
                 </select>
               </td>
-              <td><input class="rel-level" value="${r.relationship_level || ''}" /></td>
+              <td>
+                <select class="rel-role">
+                  ${safeRoles.map(role => `
+                    <option value="${role}" ${r.relationship_role === role ? 'selected' : ''}>${role}</option>
+                  `).join('')}
+                </select>
+              </td>
               <td><input class="rel-email" value="${r.related_email || ''}" /></td>
               <td><input type="checkbox" class="promote-checkbox" /></td>
             </tr>
@@ -1073,6 +1071,74 @@ function renderNoteRelationshipGrid(noteRows, types, roles, clientId) {
     </div>
   `;
 }
+
+async function saveRelationships() {
+  const rows = [...document.querySelectorAll('#content tbody tr')];
+  const updates = [];
+  const inserts = [];
+
+  rows.forEach(row => {
+    const id = row.dataset.id;
+    const contactId = row.dataset.contactId || null;
+    const firstName = row.querySelector('.first-name')?.value.trim() || '';
+    const lastName = row.querySelector('.last-name')?.value.trim() || '';
+    const relType = row.querySelector('.rel-type')?.value || '';
+    const relRole = row.querySelector('.rel-role')?.value || '';
+    const email = row.querySelector('.rel-email')?.value.trim() || '';
+    const promote = row.querySelector('.promote-checkbox')?.checked;
+
+    // PATCH notes_relationships
+    updates.push({
+      id,
+      relationship_type: relType,
+      relationship_role: relRole,
+      related_email: email
+    });
+
+    // INSERT into contact_relationships if promoted
+    if (promote) {
+      inserts.push({
+        source_contact_id: contactId,
+        related_contact_id: null, // TEMP ID will be added in Worker
+        relationship_type: relType,
+        relationship_role: relRole,
+        related_email: email
+      });
+    }
+  });
+
+  const content = document.getElementById('content');
+  content.innerHTML = `<div class="card loader">Saving relationships...</div>`;
+
+  try {
+    // PATCH existing note relationships
+    const patchRes = await fetch(`${API_BASE}/note_relationships`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ project: activeProject, updates })
+    });
+    const patchData = await patchRes.json();
+    console.log("PATCH results:", patchData);
+
+    // Bulk insert promoted rows
+    let insertData = null;
+    if (inserts.length > 0) {
+      const insertRes = await fetch(`${API_BASE}/relationships_bulk`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ project: activeProject, rows: inserts })
+      });
+      insertData = await insertRes.json();
+      console.log("INSERT results:", insertData);
+    }
+
+    content.innerHTML = `<div class="card">✅ Relationships saved successfully.</div>`;
+  } catch (err) {
+    console.error("Save error:", err);
+    content.innerHTML = `<div class="card">❌ Error saving relationships: ${err.message}</div>`;
+  }
+}
+  
 
 
 async function fetchLookups(project) {
