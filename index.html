@@ -184,7 +184,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.3.19</span>
+      <span class="muted" style="margin-left:12px;">v1.3.20</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -1048,6 +1048,10 @@ async function renderNoteRelationships() {
 function renderNoteRelationshipGrid(noteRows, types, roles, clientId) {
   const container = document.getElementById('noteRelationshipsGrid');
 
+  // Defensive fallbacks
+  const safeTypes = Array.isArray(types) ? types : [];
+  const safeRoles = Array.isArray(roles) ? roles : [];
+
   container.innerHTML = `
     <div class="notes-table-container">
       <table>
@@ -1070,7 +1074,7 @@ function renderNoteRelationshipGrid(noteRows, types, roles, clientId) {
               <td><input class="last-name" value="${r.last_name_ai || ''}" /></td>
               <td>
                 <select class="rel-role">
-                  ${roles.map(role => `
+                  ${safeRoles.map(role => `
                     <option value="${role}" ${r.role_label_ai === role ? 'selected' : ''}>${role}</option>
                   `).join('')}
                 </select>
@@ -1078,7 +1082,7 @@ function renderNoteRelationshipGrid(noteRows, types, roles, clientId) {
               <td>${r.context_description_ai || ''}</td>
               <td>
                 <select class="rel-type">
-                  ${types.map(t => `
+                  ${safeTypes.map(t => `
                     <option value="${t}" ${r.relationship_type === t ? 'selected' : ''}>${t}</option>
                   `).join('')}
                 </select>
@@ -1095,14 +1099,23 @@ function renderNoteRelationshipGrid(noteRows, types, roles, clientId) {
 }
 
 async function fetchLookups(project) {
-  const [typesRes, rolesRes] = await Promise.all([
-    fetch(`${API_BASE}/lookups?project=${project}&type=relationship_type`).then(r => r.json()),
-    fetch(`${API_BASE}/lookups?project=${project}&type=relationship_role`).then(r => r.json())
-  ]);
-  return {
-    types: typesRes.values.map(v => v.value),
-    roles: rolesRes.values.map(v => v.value)
-  };
+  try {
+    const [typesRes, rolesRes] = await Promise.all([
+      fetch(`${API_BASE}/lookups?project=${project}&type=relationship_type`).then(r => r.json()),
+      fetch(`${API_BASE}/lookups?project=${project}&type=relationship_role`).then(r => r.json())
+    ]);
+
+    console.log("Types response:", typesRes);
+    console.log("Roles response:", rolesRes);
+
+    return {
+      types: Array.isArray(typesRes.values) ? typesRes.values.map(v => v.value) : [],
+      roles: Array.isArray(rolesRes.values) ? rolesRes.values.map(v => v.value) : []
+    };
+  } catch (err) {
+    console.error("Error fetching lookups:", err);
+    return { types: [], roles: [] };
+  }
 }
 
 
