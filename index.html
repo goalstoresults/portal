@@ -184,7 +184,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.3.24</span>
+      <span class="muted" style="margin-left:12px;">v1.3.25</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -1052,6 +1052,7 @@ function renderNoteRelationshipGrid(noteRows, types, roles, clientId) {
       <table>
         <thead>
           <tr>
+            <th>Note ID</th>
             <th>First Name</th>
             <th>Last Name</th>
             <th>Context</th>
@@ -1064,6 +1065,7 @@ function renderNoteRelationshipGrid(noteRows, types, roles, clientId) {
         <tbody>
           ${noteRows.map(r => `
             <tr data-id="${r.id}" data-contact-id="${r.contact_id || ''}">
+            <td style="padding:8px;">${r.note_id || ""}</td>
               <td><input class="first-name" value="${r.first_name_ai || ''}" /></td>
               <td><input class="last-name" value="${r.last_name_ai || ''}" /></td>
               <td>${r.context_description_ai || ''}</td>
