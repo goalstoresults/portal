@@ -184,7 +184,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.3.18</span>
+      <span class="muted" style="margin-left:12px;">v1.3.19</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -1045,7 +1045,7 @@ async function renderNoteRelationships() {
 }
 
 
-function renderNoteRelationshipGrid(noteRows, globalRels, clientId) {
+function renderNoteRelationshipGrid(noteRows, types, roles, clientId) {
   const container = document.getElementById('noteRelationshipsGrid');
 
   container.innerHTML = `
@@ -1059,6 +1059,7 @@ function renderNoteRelationshipGrid(noteRows, globalRels, clientId) {
             <th>Context</th>
             <th>Relationship Type</th>
             <th>Relationship Level</th>
+            <th>Email</th>
             <th>Promote</th>
           </tr>
         </thead>
@@ -1067,10 +1068,23 @@ function renderNoteRelationshipGrid(noteRows, globalRels, clientId) {
             <tr data-id="${r.id}" data-contact-id="${r.contact_id || ''}">
               <td><input class="first-name" value="${r.first_name_ai || ''}" /></td>
               <td><input class="last-name" value="${r.last_name_ai || ''}" /></td>
-              <td>${r.role_label_ai || ''}</td>
+              <td>
+                <select class="rel-role">
+                  ${roles.map(role => `
+                    <option value="${role}" ${r.role_label_ai === role ? 'selected' : ''}>${role}</option>
+                  `).join('')}
+                </select>
+              </td>
               <td>${r.context_description_ai || ''}</td>
-              <td><input class="rel-type" value="${r.relationship_type || ''}" /></td>
+              <td>
+                <select class="rel-type">
+                  ${types.map(t => `
+                    <option value="${t}" ${r.relationship_type === t ? 'selected' : ''}>${t}</option>
+                  `).join('')}
+                </select>
+              </td>
               <td><input class="rel-level" value="${r.relationship_level || ''}" /></td>
+              <td><input class="rel-email" value="${r.related_email || ''}" /></td>
               <td><input type="checkbox" class="promote-checkbox" /></td>
             </tr>
           `).join('')}
@@ -1080,6 +1094,16 @@ function renderNoteRelationshipGrid(noteRows, globalRels, clientId) {
   `;
 }
 
+async function fetchLookups(project) {
+  const [typesRes, rolesRes] = await Promise.all([
+    fetch(`${API_BASE}/lookups?project=${project}&type=relationship_type`).then(r => r.json()),
+    fetch(`${API_BASE}/lookups?project=${project}&type=relationship_role`).then(r => r.json())
+  ]);
+  return {
+    types: typesRes.values.map(v => v.value),
+    roles: rolesRes.values.map(v => v.value)
+  };
+}
 
 
 
