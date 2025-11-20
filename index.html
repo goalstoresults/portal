@@ -184,7 +184,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.3.23</span>
+      <span class="muted" style="margin-left:12px;">v1.3.24</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -1001,23 +1001,30 @@ function openNoteRelationshipsTab(noteId, clientId) {
   
 async function renderNoteRelationships() {
   const content = document.getElementById('content');
-  content.innerHTML = `<div class="card loader">Loading Note Relationships...</div>`;
+  content.innerHTML = `<div class="card loader">Loading relationships...</div>`;
 
   try {
+    // ✅ Use selectedNoteId and activeProject directly
+    const relRes = await fetch(
+      `${API_BASE}/note_relationships?project=${encodeURIComponent(activeProject)}&note_id=${encodeURIComponent(selectedNoteId)}`
+    );
+    const relData = await relRes.json();
+    console.log("Fetched relationships:", relData);
+
+    const noteRows = Array.isArray(relData.relationships) ? relData.relationships : [];
+
+    // ✅ Fetch dropdown values for type/role
     const lookups = await fetchLookups(activeProject);
     console.log("Lookups fetched:", lookups);
 
-    // Example rows until you wire actual note_relationships
-    const noteRows = [
-      { id: 1, first_name_ai: "Mickie", last_name_ai: "Mouse", role_label_ai: "", context_description_ai: "Recipient of the email" },
-      { id: 2, first_name_ai: "Donald", last_name_ai: "Duck", role_label_ai: "", context_description_ai: "Recipient of the email" }
-    ];
-
-    renderNoteRelationshipGrid(noteRows, lookups.types, lookups.roles, activeProject);
+    // ✅ Render the editable grid with correct clientId
+    renderNoteRelationshipGrid(noteRows, lookups.types, lookups.roles, currentClientId);
   } catch (err) {
-    content.innerHTML = `<div class="card">Error loading relationships: ${err.message}</div>`;
+    console.error("Error loading relationships:", err);
+    content.innerHTML = `<div class="card">❌ Failed to load relationships: ${err.message}</div>`;
   }
 }
+
 
 /* ---------- Lookups ---------- */
 async function fetchLookups(project) {
@@ -1093,76 +1100,42 @@ function renderNoteRelationshipGrid(noteRows, types, roles, clientId) {
 }
 
 /* ---------- Save Handler ---------- */
-async function saveRelationships() {
-  const rows = [...document.querySelectorAll('#content tbody tr')];
-  const updates = [];
-  const inserts = [];
-
-  rows.forEach(row => {
-    const id = row.dataset.id;
-    const contactId = row.dataset.contactId || null;
-    const firstName = row.querySelector('.first-name')?.value.trim() || '';
-    const lastName = row.querySelector('.last-name')?.value.trim() || '';
-    const relType = row.querySelector('.rel-type')?.value || '';
-    const relRole = row.querySelector('.rel-role')?.value || '';
-    const email = row.querySelector('.rel-email')?.value.trim() || '';
-    const promote = row.querySelector('.promote-checkbox')?.checked;
-
-    // PATCH notes_relationships
-    updates.push({
-      id,
-      relationship_type: relType,
-      relationship_role: relRole,
-      related_email: email
-    });
-
-    // INSERT into contact_relationships if promoted
-    if (promote) {
-      inserts.push({
-        source_contact_id: contactId,
-        related_contact_id: null, // TEMP ID will be added in Worker
-        relationship_type: relType,
-        relationship_role: relRole,
-        related_email: email
-      });
-    }
-  });
-
-  const content = document.getElementById('content');
-  content.innerHTML = `<div class="card loader">Saving relationships...</div>`;
-
+async function saveRelationships(rows) {
   try {
-    // PATCH existing note relationships
-    const patchRes = await fetch(`${API_BASE}/note_relationships`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+    // ✅ Build the payload for PATCH
+    const updates = rows.map(r => ({
+      id: r.id,
+      relationship_type: r.relationship_type || null,
+      relationship_role: r.relationship_role || null,
+      related_email: r.related_email || null
+    }));
+
+    console.log("Sending PATCH updates:", updates);
+
+    // ✅ Send PATCH to notes_relationships
+    const res = await fetch(`${API_BASE}/note_relationships`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ project: activeProject, updates })
     });
-    const patchData = await patchRes.json();
-    console.log("PATCH results:", patchData);
 
-    // Bulk insert promoted rows
-    let insertData = null;
-    if (inserts.length > 0) {
-      const insertRes = await fetch(`${API_BASE}/relationships_bulk`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ project: activeProject, rows: inserts })
-      });
-      insertData = await insertRes.json();
-      console.log("INSERT results:", insertData);
+    const data = await res.json();
+    console.log("PATCH results:", data);
+
+    if (res.ok && data.success) {
+      alert("✅ Relationships saved successfully");
+    } else {
+      alert("❌ Failed to save relationships");
+      console.error("Save error:", data);
     }
 
-    content.innerHTML = `<div class="card">✅ Relationships saved successfully.</div>`;
+    // 🚫 Bulk insert removed for now
+    // We’ll reintroduce contact_relationships promotion later
   } catch (err) {
-    console.error("Save error:", err);
-    content.innerHTML = `<div class="card">❌ Error saving relationships: ${err.message}</div>`;
+    alert("❌ Save failed");
+    console.error("Save exception:", err);
   }
 }
-
-
-
-
 
 
 
