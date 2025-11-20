@@ -184,7 +184,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.3.24</span>
+      <span class="muted" style="margin-left:12px;">v1.3.25</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -997,34 +997,38 @@ function openNoteRelationshipsTab(noteId, clientId) {
   // Render the relationships tab dynamically into #content
   renderNoteRelationships();
 }
-
-  
-async function renderNoteRelationships() {
+async function renderNoteRelationships(noteId, clientId) {
   const content = document.getElementById('content');
   content.innerHTML = `<div class="card loader">Loading relationships...</div>`;
 
+  // Fallbacks to protect against undefined in edge calls
+  const note_id = noteId || selectedNoteId;
+  const project = activeProject;
+
+  // Construct and log the exact URL used
+  const url = `${API_BASE}/note_relationships?project=${encodeURIComponent(project)}&note_id=${encodeURIComponent(note_id)}`;
+  console.log("Note relationships fetch URL:", url);
+
   try {
-    // ✅ Use selectedNoteId and activeProject directly
-    const relRes = await fetch(
-      `${API_BASE}/note_relationships?project=${encodeURIComponent(activeProject)}&note_id=${encodeURIComponent(selectedNoteId)}`
-    );
+    const relRes = await fetch(url);
     const relData = await relRes.json();
-    console.log("Fetched relationships:", relData);
+    console.log("Fetched relationships response:", relData);
 
     const noteRows = Array.isArray(relData.relationships) ? relData.relationships : [];
 
-    // ✅ Fetch dropdown values for type/role
-    const lookups = await fetchLookups(activeProject);
+    // Fetch dropdown values
+    const lookups = await fetchLookups(project);
     console.log("Lookups fetched:", lookups);
 
-    // ✅ Render the editable grid with correct clientId
-    renderNoteRelationshipGrid(noteRows, lookups.types, lookups.roles, currentClientId);
+    // Use the provided clientId (from openNoteRelationshipsTab) as intended
+    renderNoteRelationshipGrid(noteRows, lookups.types, lookups.roles, clientId);
   } catch (err) {
     console.error("Error loading relationships:", err);
     content.innerHTML = `<div class="card">❌ Failed to load relationships: ${err.message}</div>`;
   }
 }
 
+  
 
 /* ---------- Lookups ---------- */
 async function fetchLookups(project) {
