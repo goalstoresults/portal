@@ -184,7 +184,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.3.7</span>
+      <span class="muted" style="margin-left:12px;">v1.3.8</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -777,6 +777,10 @@ async function renderNoteReview() {
       content.innerHTML += `
         <div class="card" style="margin-top:16px;">
           <h4>Participants Detected in Note</h4>
+          <button id="noteRelationshipsBtn"
+              onclick="openNoteRelationshipsTab('${note.id}', '${note.client_id}')">
+              Note Relationships
+          </button>
           <table style="width:100%; border-collapse:collapse;">
             <thead style="background:#f0f0f0;">
               <tr>
@@ -981,12 +985,66 @@ async function deleteNote() {
   renderNoteHistory();
 }
 
+function openNoteRelationshipsTab(noteId, clientId) {
+  // Hide review tab, show relationships tab
+  document.getElementById('noteReviewTab').style.display = 'none';
+  document.getElementById('noteRelationshipsTab').style.display = 'block';
 
+  // Load relationships data
+  loadNoteRelationships(noteId, clientId);
+}
+  
 async function renderNoteRelationships() {
   const content = document.getElementById('content');
-  if (!selectedNoteId) { content.innerHTML = `<div class="card">Select a note in history first.</div>`; return; }
-  content.innerHTML = `<div class="card">Relationships for note ${selectedNoteId} (wire to relationships UI next).</div>`;
+
+  if (!selectedNoteId) {
+    content.innerHTML = `<div class="card">Select a note in history first.</div>`;
+    return;
+  }
+
+  // Build the static shell for the tab
+  content.innerHTML = `
+    <div class="card">
+      <h3>Note Relationships</h3>
+
+      <!-- Editable grid of note relationships -->
+      <div id="noteRelationshipsGrid"></div>
+
+      <!-- Save button -->
+      <button id="noteRelationshipsSave" class="btn btn-primary">Save Relationships</button>
+
+      <!-- Existing global relationships -->
+      <h4>Existing Contact Relationships</h4>
+      <div id="existingContactRelationshipsGrid"></div>
+    </div>
+  `;
+
+  // Load data for this note and its client
+  const noteUrl = `${API_BASE}/note_relationships?note_id=${encodeURIComponent(selectedNoteId)}&project=${encodeURIComponent(activeProject)}`;
+  const clientId = currentClientId; // make sure you set this when opening the note
+  const relUrl  = `${API_BASE}/relationships?contact_id=${encodeURIComponent(clientId)}&project=${encodeURIComponent(activeProject)}`;
+
+  try {
+    const [noteRes, relRes] = await Promise.all([fetch(noteUrl), fetch(relUrl)]);
+    const noteRows = await noteRes.json();
+    const relRows  = await relRes.json();
+
+    // Render both grids
+    renderNoteRelationshipGrid(noteRows, relRows, clientId);
+    renderContactRelationshipGrid(relRows);
+
+    // Wire up save button
+    document.getElementById('noteRelationshipsSave').onclick = () =>
+      saveNoteRelationships(noteRows, clientId);
+
+  } catch (err) {
+    console.error("Error loading relationships:", err);
+    document.getElementById('noteRelationshipsGrid').innerHTML =
+      `<div class="error">Failed to load relationships.</div>`;
+  }
 }
+
+
 
 /* ---------- Tasks ---------- */
 async function renderTasks(filter = 'open') {
