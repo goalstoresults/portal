@@ -184,7 +184,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.3.12</span>
+      <span class="muted" style="margin-left:12px;">v1.3.13</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -1051,7 +1051,22 @@ async function renderNoteRelationships() {
 
 function renderNoteRelationshipGrid(noteRows, globalRels, clientId) {
   const container = document.getElementById('noteRelationshipsGrid');
-  container.innerHTML = noteRows.map(r => {
+
+  // Header row
+  container.innerHTML = `
+    <div class="grid-header">
+      <div class="cell">First Name</div>
+      <div class="cell">Last Name</div>
+      <div class="cell">Role Type</div>
+      <div class="cell">Context</div>
+      <div class="cell">Relationship Type</div>
+      <div class="cell">Relationship Level</div>
+      <div class="cell">Promote</div>
+    </div>
+  `;
+
+  // Data rows
+  container.innerHTML += noteRows.map(r => {
     const exists = globalRels.some(g =>
       (g.source_contact_id === clientId && g.related_contact_id === r.contact_id) ||
       (g.related_contact_id === clientId && g.source_contact_id === r.contact_id)
@@ -1059,19 +1074,20 @@ function renderNoteRelationshipGrid(noteRows, globalRels, clientId) {
 
     return `
       <div class="grid-row" data-id="${r.id}" data-contact-id="${r.contact_id}">
-        <div class="cell"><strong>${r.contact_name}</strong> <span>${r.contact_type}</span></div>
-        <div class="cell"><input class="rel-type" value="${r.relationship_type || ''}" placeholder="Type"/></div>
-        <div class="cell"><input class="rel-level" value="${r.relationship_level || ''}" placeholder="Level"/></div>
+        <div class="cell"><input class="first-name" value="${r.first_name || ''}" /></div>
+        <div class="cell"><input class="last-name" value="${r.last_name || ''}" /></div>
+        <div class="cell">${r.contact_type || ''}</div>
+        <div class="cell">${r.context || ''}</div>
+        <div class="cell"><input class="rel-type" value="${r.relationship_type || ''}" placeholder="Type" /></div>
+        <div class="cell"><input class="rel-level" value="${r.relationship_level || ''}" placeholder="Level" /></div>
         <div class="cell">
-          <label>
-            <input type="checkbox" class="promote-checkbox" ${exists ? 'disabled' : ''}/>
-            ${exists ? 'Already global' : 'Add to global'}
-          </label>
+          <input type="checkbox" class="promote-checkbox" ${exists ? 'disabled' : ''}/>
         </div>
       </div>
     `;
   }).join('');
 }
+
 
 function renderContactRelationshipGrid(rows) {
   const container = document.getElementById('existingContactRelationshipsGrid');
