@@ -184,7 +184,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.3.11</span>
+      <span class="muted" style="margin-left:12px;">v1.3.12</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -1073,6 +1073,23 @@ function renderNoteRelationshipGrid(noteRows, globalRels, clientId) {
   }).join('');
 }
 
+function renderContactRelationshipGrid(rows) {
+  const container = document.getElementById('existingContactRelationshipsGrid');
+
+  if (!Array.isArray(rows) || rows.length === 0) {
+    container.innerHTML = `<div class="muted">No existing global relationships.</div>`;
+    return;
+  }
+
+  container.innerHTML = rows.map(r => `
+    <div class="grid-row">
+      <div class="cell">${r.source_contact_id} ↔ ${r.related_contact_id}</div>
+      <div class="cell">${r.relationship_type || ''}</div>
+      <div class="cell">${r.relationship_level || ''}</div>
+    </div>
+  `).join('');
+}
+  
 
 /* ---------- Tasks ---------- */
 async function renderTasks(filter = 'open') {
