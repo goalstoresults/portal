@@ -184,7 +184,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.3.22</span>
+      <span class="muted" style="margin-left:12px;">v1.3.23</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -1019,8 +1019,28 @@ async function renderNoteRelationships() {
   }
 }
 
+/* ---------- Lookups ---------- */
+async function fetchLookups(project) {
+  try {
+    const [typesRes, rolesRes] = await Promise.all([
+      fetch(`${API_BASE}/lookups?project=${encodeURIComponent(project)}&type=relationship_type`).then(r => r.json()),
+      fetch(`${API_BASE}/lookups?project=${encodeURIComponent(project)}&type=relationship_role`).then(r => r.json())
+    ]);
 
+    console.log("Types response:", typesRes);
+    console.log("Roles response:", rolesRes);
 
+    return {
+      types: Array.isArray(typesRes.values) ? typesRes.values.map(v => v.value) : [],
+      roles: Array.isArray(rolesRes.values) ? rolesRes.values.map(v => v.value) : []
+    };
+  } catch (err) {
+    console.error("Error fetching lookups:", err);
+    return { types: [], roles: [] };
+  }
+}
+
+/* ---------- Grid Renderer ---------- */
 function renderNoteRelationshipGrid(noteRows, types, roles, clientId) {
   const container = document.getElementById('content');
 
@@ -1072,6 +1092,7 @@ function renderNoteRelationshipGrid(noteRows, types, roles, clientId) {
   `;
 }
 
+/* ---------- Save Handler ---------- */
 async function saveRelationships() {
   const rows = [...document.querySelectorAll('#content tbody tr')];
   const updates = [];
@@ -1138,28 +1159,10 @@ async function saveRelationships() {
     content.innerHTML = `<div class="card">❌ Error saving relationships: ${err.message}</div>`;
   }
 }
-  
 
 
-async function fetchLookups(project) {
-  try {
-    const [typesRes, rolesRes] = await Promise.all([
-      fetch(`${API_BASE}/lookups?project=${encodeURIComponent(project)}&type=relationship_type`).then(r => r.json()),
-      fetch(`${API_BASE}/lookups?project=${encodeURIComponent(project)}&type=relationship_role`).then(r => r.json())
-    ]);
 
-    console.log("Types response:", typesRes);
-    console.log("Roles response:", rolesRes);
 
-    return {
-      types: Array.isArray(typesRes.values) ? typesRes.values.map(v => v.value) : [],
-      roles: Array.isArray(rolesRes.values) ? rolesRes.values.map(v => v.value) : []
-    };
-  } catch (err) {
-    console.error("Error fetching lookups:", err);
-    return { types: [], roles: [] };
-  }
-}
 
 
 
