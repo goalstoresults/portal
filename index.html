@@ -184,7 +184,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.3.10</span>
+      <span class="muted" style="margin-left:12px;">v1.3.11</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -776,14 +776,15 @@ async function renderNoteReview() {
     if (relationships.length > 0) {
       content.innerHTML += `
         <div class="card" style="margin-top:16px;">
-        <div style="display:flex; align-items:center; justify-content:space-between; margin-top:1em;">
-          <h4>Participants Detected in Note</h4>
+        <div style="display: flex; align-items: baseline; gap: 0.5em; margin-top: 1em;">
+          <h4 style="margin: 0;">Participants Detected in Note</h4>
           <button id="noteRelationshipsBtn"
-                  class="btn btn-secondary"
+                  class="btn btn-sm btn-secondary"
                   onclick="openNoteRelationshipsTab('${note.id}', '${note.client_id}')">
             Note Relationships
           </button>
         </div>
+
           <table style="width:100%; border-collapse:collapse;">
             <thead style="background:#f0f0f0;">
               <tr>
