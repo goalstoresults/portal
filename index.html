@@ -184,7 +184,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.3.27</span>
+      <span class="muted" style="margin-left:12px;">v1.3.28</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -704,6 +704,8 @@ function enableNoteReviewSubtabs() {
   if (relBtn) relBtn.disabled = false;
 }
 
+
+  
 async function renderNoteReview() {
   const content = document.getElementById('content');
   if (!selectedNoteId) {
@@ -804,6 +806,7 @@ async function renderNoteReview() {
     }
 
     // Diagnostic logging
+    console.log("NoteReview → note.id:", note.id, "note.client_id:", note.client_id);
     relationships.forEach(r => {
       console.log(`NoteReview row → id: ${r.id}, note_id: ${r.note_id}`);
     });
@@ -811,6 +814,7 @@ async function renderNoteReview() {
     content.innerHTML = `<div class="card">Error loading note: ${err.message}</div>`;
   }
 }
+
 
   
 function toggleSetClientForm() {
