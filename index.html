@@ -184,7 +184,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.3.20</span>
+      <span class="muted" style="margin-left:12px;">v1.3.21</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -1001,54 +1001,29 @@ function openNoteRelationshipsTab(noteId, clientId) {
   
 async function renderNoteRelationships() {
   const content = document.getElementById('content');
-
-  if (!selectedNoteId) {
-    content.innerHTML = `<div class="card">Select a note in history first.</div>`;
-    return;
-  }
-
-  content.innerHTML = `
-    <div class="card">
-      <h3>Note Relationships</h3>
-      <div id="noteRelationshipsGrid"></div>
-      <button id="noteRelationshipsSave" class="btn btn-primary">Save Relationships</button>
-      <h4>Existing Contact Relationships</h4>
-      <div id="existingContactRelationshipsGrid"></div>
-    </div>
-  `;
-
-  const clientId = currentClientId;
+  content.innerHTML = `<div class="card loader">Loading Note Relationships...</div>`;
 
   try {
-    const [noteRes, relRes] = await Promise.all([
-      fetch(`${API_BASE}/note_relationships?note_id=${encodeURIComponent(selectedNoteId)}&project=${encodeURIComponent(activeProject)}`),
-      fetch(`${API_BASE}/relationships?contact_id=${encodeURIComponent(clientId)}&project=${encodeURIComponent(activeProject)}`)
-    ]);
+    const lookups = await fetchLookups(activeProject);
+    console.log("Lookups fetched:", lookups);
 
-    const noteData = await noteRes.json();
-    const relData = await relRes.json();
+    // Example rows until you wire actual note_relationships
+    const noteRows = [
+      { id: 1, first_name_ai: "Mickie", last_name_ai: "Mouse", role_label_ai: "", context_description_ai: "Recipient of the email" },
+      { id: 2, first_name_ai: "Donald", last_name_ai: "Duck", role_label_ai: "", context_description_ai: "Recipient of the email" }
+    ];
 
-    const noteRows = noteData.relationships || []; // ✅ extract array
-    const relRows = relData.relationships || [];   // ✅ same here
-
-    renderNoteRelationshipGrid(noteRows, relRows, clientId);
-    renderContactRelationshipGrid(relRows);
-
-    document.getElementById('noteRelationshipsSave').onclick = () =>
-      saveNoteRelationships(noteRows, clientId);
-
+    renderNoteRelationshipGrid(noteRows, lookups.types, lookups.roles, activeProject);
   } catch (err) {
-    console.error("Error loading relationships:", err);
-    document.getElementById('noteRelationshipsGrid').innerHTML =
-      `<div class="error">Failed to load relationships.</div>`;
+    content.innerHTML = `<div class="card">Error loading relationships: ${err.message}</div>`;
   }
 }
 
 
-function renderNoteRelationshipGrid(noteRows, types, roles, clientId) {
-  const container = document.getElementById('noteRelationshipsGrid');
 
-  // Defensive fallbacks
+function renderNoteRelationshipGrid(noteRows, types, roles, clientId) {
+  const container = document.getElementById('content');
+
   const safeTypes = Array.isArray(types) ? types : [];
   const safeRoles = Array.isArray(roles) ? roles : [];
 
@@ -1069,7 +1044,7 @@ function renderNoteRelationshipGrid(noteRows, types, roles, clientId) {
         </thead>
         <tbody>
           ${noteRows.map(r => `
-            <tr data-id="${r.id}" data-contact-id="${r.contact_id || ''}">
+            <tr data-id="${r.id}">
               <td><input class="first-name" value="${r.first_name_ai || ''}" /></td>
               <td><input class="last-name" value="${r.last_name_ai || ''}" /></td>
               <td>
@@ -1094,15 +1069,17 @@ function renderNoteRelationshipGrid(noteRows, types, roles, clientId) {
           `).join('')}
         </tbody>
       </table>
+      <button class="primary" onclick="saveRelationships()">Save Relationships</button>
     </div>
   `;
 }
 
+
 async function fetchLookups(project) {
   try {
     const [typesRes, rolesRes] = await Promise.all([
-      fetch(`${API_BASE}/lookups?project=${project}&type=relationship_type`).then(r => r.json()),
-      fetch(`${API_BASE}/lookups?project=${project}&type=relationship_role`).then(r => r.json())
+      fetch(`${API_BASE}/lookups?project=${encodeURIComponent(project)}&type=relationship_type`).then(r => r.json()),
+      fetch(`${API_BASE}/lookups?project=${encodeURIComponent(project)}&type=relationship_role`).then(r => r.json())
     ]);
 
     console.log("Types response:", typesRes);
@@ -1117,6 +1094,7 @@ async function fetchLookups(project) {
     return { types: [], roles: [] };
   }
 }
+
 
 
 
