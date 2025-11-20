@@ -184,7 +184,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.3.23</span>
+      <span class="muted" style="margin-left:12px;">v1.3.24</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -999,25 +999,30 @@ function openNoteRelationshipsTab(noteId, clientId) {
 }
 
   
-async function renderNoteRelationships() {
+async function renderNoteRelationships(noteId, clientId) {
   const content = document.getElementById('content');
-  content.innerHTML = `<div class="card loader">Loading Note Relationships...</div>`;
+  content.innerHTML = `<div class="card loader">Loading relationships...</div>`;
 
   try {
+    // Fetch relationships tied to the note
+    const relRes = await fetch(`${API_BASE}/note_relationships?project=${activeProject}&note_id=${noteId}`);
+    const relData = await relRes.json();
+    console.log("Fetched relationships:", relData);
+
+    const noteRows = Array.isArray(relData.relationships) ? relData.relationships : [];
+
+    // Fetch dropdown values
     const lookups = await fetchLookups(activeProject);
     console.log("Lookups fetched:", lookups);
 
-    // Example rows until you wire actual note_relationships
-    const noteRows = [
-      { id: 1, first_name_ai: "Mickie", last_name_ai: "Mouse", role_label_ai: "", context_description_ai: "Recipient of the email" },
-      { id: 2, first_name_ai: "Donald", last_name_ai: "Duck", role_label_ai: "", context_description_ai: "Recipient of the email" }
-    ];
-
-    renderNoteRelationshipGrid(noteRows, lookups.types, lookups.roles, activeProject);
+    // Render the editable grid
+    renderNoteRelationshipGrid(noteRows, lookups.types, lookups.roles, clientId);
   } catch (err) {
-    content.innerHTML = `<div class="card">Error loading relationships: ${err.message}</div>`;
+    console.error("Error loading relationships:", err);
+    content.innerHTML = `<div class="card">❌ Failed to load relationships: ${err.message}</div>`;
   }
 }
+
 
 /* ---------- Lookups ---------- */
 async function fetchLookups(project) {
