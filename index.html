@@ -184,7 +184,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.3.29</span>
+      <span class="muted" style="margin-left:12px;">v1.3.30</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -977,13 +977,12 @@ async function deleteNote() {
 }
 
 function openNoteRelationshipsTab(noteId, clientId) {
-  // Set globals so renderNoteRelationships() knows what to load
+  console.log("openNoteRelationshipsTab args:", noteId, clientId);
   selectedNoteId = noteId;
   currentClientId = clientId;
-
-  // Render the relationships tab dynamically into #content
-  renderNoteRelationships();
+  renderNoteRelationships(noteId, clientId);
 }
+
 
   
 async function renderNoteRelationships(noteId, clientId) {
