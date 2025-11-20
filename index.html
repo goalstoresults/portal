@@ -184,7 +184,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.3.25</span>
+      <span class="muted" style="margin-left:12px;">v1.3.26</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -738,26 +738,14 @@ async function renderNoteReview() {
       console.warn("Failed to load relationships:", err);
     }
 
+    // Render note details
     content.innerHTML = `
       <div class="card">
-<div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
-  <h3 style="margin:0;">Note Review</h3>
-  <button onclick="toggleSetClientForm()">Set Client</button>
-  <button onclick="deleteNote()" class="danger">Delete</button>
-</div>
-
-<div id="setClientForm" style="display:none;">
-  <div class="card" style="margin-bottom:12px;">
-    <div class="row" style="gap:12px;">
-      <input id="filter-first" placeholder="First name" />
-      <input id="filter-last" placeholder="Last name" />
-      <input id="filter-email" placeholder="Email" />
-      <button class="primary" onclick="findClientContacts()">Find</button>
-    </div>
-  </div>
-  <div id="clientSearchResults" class="card">Enter criteria and click Find.</div>
-</div>
-
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+          <h3 style="margin:0;">Note Review</h3>
+          <button onclick="toggleSetClientForm()">Set Client</button>
+          <button onclick="deleteNote()" class="danger">Delete</button>
+        </div>
         <p><strong>Subject:</strong> ${note.subject || "(no subject)"}</p>
         <p><strong>From:</strong> ${note.from_name || ""} (${note.from_email || ""})</p>
         <p><strong>Created:</strong> ${new Date(note.created_at).toLocaleString()}</p>
@@ -770,21 +758,21 @@ async function renderNoteReview() {
           <summary style="cursor:pointer; font-weight:600;">▼ Raw Text (click to expand)</summary>
           <pre style="white-space:pre-wrap; margin-top:8px;">${note.raw_text || ""}</pre>
         </details>
-
+      </div>
     `;
 
+    // Render relationships table if present
     if (relationships.length > 0) {
       content.innerHTML += `
         <div class="card" style="margin-top:16px;">
-        <div style="display: flex; align-items: baseline; gap: 0.5em; margin-top: 1em;">
-          <h4 style="margin: 0;">Participants Detected in Note</h4>
-          <button id="noteRelationshipsBtn"
-                  class="btn btn-sm btn-secondary"
-                  onclick="openNoteRelationshipsTab('${note.id}', '${note.client_id}')">
-            Note Relationships
-          </button>
-        </div>
-
+          <div style="display:flex; align-items:baseline; gap:0.5em; margin-top:1em;">
+            <h4 style="margin:0;">Participants Detected in Note</h4>
+            <button id="noteRelationshipsBtn"
+                    class="btn btn-sm btn-secondary"
+                    onclick="openNoteRelationshipsTab('${note.id}', '${note.client_id}')">
+              Note Relationships
+            </button>
+          </div>
           <table style="width:100%; border-collapse:collapse;">
             <thead style="background:#f0f0f0;">
               <tr>
@@ -793,16 +781,20 @@ async function renderNoteReview() {
                 <th style="text-align:left; padding:8px;">AI Last</th>
                 <th style="text-align:left; padding:8px;">Role/Type</th>
                 <th style="text-align:left; padding:8px;">Context</th>
+                <th style="text-align:left; padding:8px;">Row ID</th>
+                <th style="text-align:left; padding:8px;">Note ID</th>
               </tr>
             </thead>
             <tbody>
-              ${relationships.map((r, i) => `
-                <tr style="background:${i % 2 === 0 ? "#fff" : "#f9f9f9"};">
+              ${relationships.map(r => `
+                <tr data-id="${r.id}">
                   <td style="padding:8px;">${r.raw_name || ""}</td>
                   <td style="padding:8px;">${r.first_name_ai || ""}</td>
                   <td style="padding:8px;">${r.last_name_ai || ""}</td>
                   <td style="padding:8px;">${r.role_label_ai || ""}</td>
                   <td style="padding:8px;">${r.context_description_ai || ""}</td>
+                  <td style="padding:8px;">${r.id}</td>
+                  <td style="padding:8px;">${r.note_id}</td>
                 </tr>
               `).join("")}
             </tbody>
@@ -811,32 +803,16 @@ async function renderNoteReview() {
       `;
     }
 
-    // Wire up search input
-    setTimeout(() => {
-      const input = document.getElementById("clientSearchInput");
-      if (input) {
-        input.addEventListener("input", async (e) => {
-          const query = e.target.value.trim();
-          if (!query) return;
-
-          const res = await fetch(`https://notes-history-module.dennis-e64.workers.dev?project=${encodeURIComponent(activeProject)}&table=contacts&or=(name.ilike.*${query}*,email.ilike.*${query}*)`);
-          const data = await res.json();
-          const results = data.notes || [];
-
-          const container = document.getElementById("clientSearchResults");
-          container.innerHTML = results.map(c => `
-            <div style="padding:8px; border-bottom:1px solid #eee; cursor:pointer;" onclick="attachClientToNote('${c.id}', '${c.name}', '${c.type}')">
-              <strong>${c.name}</strong><br/><small>${c.email}</small>
-            </div>
-          `).join("");
-        });
-      }
-    }, 100);
+    // Diagnostic logging
+    relationships.forEach(r => {
+      console.log(`NoteReview row → id: ${r.id}, note_id: ${r.note_id}`);
+    });
   } catch (err) {
     content.innerHTML = `<div class="card">Error loading note: ${err.message}</div>`;
   }
 }
 
+  
 function toggleSetClientForm() {
   const form = document.getElementById("setClientForm");
   form.style.display = form.style.display === "none" ? "block" : "none";
@@ -1041,59 +1017,85 @@ async function fetchLookups(project) {
 }
 
 /* ---------- Grid Renderer ---------- */
-function renderNoteRelationshipGrid(noteRows, types, roles, clientId) {
-  const container = document.getElementById('content');
+function renderNoteRelationshipGrid(rows, typeOptions = [], roleOptions = [], clientId = null) {
+  const content = document.getElementById('content');
 
-  const safeTypes = Array.isArray(types) ? types : [];
-  const safeRoles = Array.isArray(roles) ? roles : [];
-
-  container.innerHTML = `
-    <div class="notes-table-container">
-      <table>
-        <thead>
+  let html = `
+    <div class="card">
+      <h3>Note Relationships</h3>
+      <table style="width:100%; border-collapse:collapse; margin-top:12px;">
+        <thead style="background:#f0f0f0;">
           <tr>
-            <th>Note ID</th>
-            <th>First Name</th>
-            <th>Last Name</th>
-            <th>Context</th>
-            <th>Relationship Type</th>
-            <th>Relationship Role</th>
-            <th>Email</th>
-            <th>Promote</th>
+            <th style="text-align:left; padding:8px;">Raw Name</th>
+            <th style="text-align:left; padding:8px;">AI First</th>
+            <th style="text-align:left; padding:8px;">AI Last</th>
+            <th style="text-align:left; padding:8px;">Role/Type</th>
+            <th style="text-align:left; padding:8px;">Context</th>
+            <th style="text-align:left; padding:8px;">Relationship Type</th>
+            <th style="text-align:left; padding:8px;">Relationship Role</th>
+            <th style="text-align:left; padding:8px;">Email</th>
+            <th style="text-align:left; padding:8px;">Row ID</th>
+            <th style="text-align:left; padding:8px;">Note ID</th>
           </tr>
         </thead>
         <tbody>
-          ${noteRows.map(r => `
-            <tr data-id="${r.id}" data-contact-id="${r.contact_id || ''}">
-            <td style="padding:8px;">${r.note_id || ""}</td>
-              <td><input class="first-name" value="${r.first_name_ai || ''}" /></td>
-              <td><input class="last-name" value="${r.last_name_ai || ''}" /></td>
-              <td>${r.context_description_ai || ''}</td>
-              <td>
-                <select class="rel-type">
-                  ${safeTypes.map(t => `
-                    <option value="${t}" ${r.relationship_type === t ? 'selected' : ''}>${t}</option>
-                  `).join('')}
-                </select>
-              </td>
-              <td>
-                <select class="rel-role">
-                  ${safeRoles.map(role => `
-                    <option value="${role}" ${r.relationship_role === role ? 'selected' : ''}>${role}</option>
-                  `).join('')}
-                </select>
-              </td>
-              <td><input class="rel-email" value="${r.related_email || ''}" /></td>
-              <td><input type="checkbox" class="promote-checkbox" /></td>
-            </tr>
-          `).join('')}
+  `;
+
+  rows.forEach(r => {
+    html += `
+      <tr data-id="${r.id}">
+        <td style="padding:8px;">${r.raw_name || ""}</td>
+        <td style="padding:8px;">${r.first_name_ai || ""}</td>
+        <td style="padding:8px;">${r.last_name_ai || ""}</td>
+        <td style="padding:8px;">${r.role_label_ai || ""}</td>
+        <td style="padding:8px;">${r.context_description_ai || ""}</td>
+
+        <td style="padding:8px;">
+          <select class="rel-type">
+            ${typeOptions.map(opt =>
+              `<option value="${opt.value}" ${opt.value === r.relationship_type ? "selected" : ""}>${opt.value}</option>`
+            ).join("")}
+          </select>
+        </td>
+
+        <td style="padding:8px;">
+          <select class="rel-role">
+            ${roleOptions.map(opt =>
+              `<option value="${opt.value}" ${opt.value === r.relationship_role ? "selected" : ""}>${opt.value}</option>`
+            ).join("")}
+          </select>
+        </td>
+
+        <td style="padding:8px;">
+          <input class="rel-email" type="text" value="${r.relationship_email || ""}" />
+        </td>
+
+        <td style="padding:8px;">${r.id}</td>
+        <td style="padding:8px;">${r.note_id || "(missing)"}</td>
+      </tr>
+    `;
+  });
+
+  html += `
         </tbody>
       </table>
-      <button class="primary" onclick="saveRelationships()">Save Relationships</button>
+      <div style="margin-top:12px;">
+        <button class="primary" onclick="saveRelationships()">Save</button>
+      </div>
     </div>
   `;
+
+  content.innerHTML = html;
+
+  // Diagnostic logging
+  rows.forEach(r => {
+    console.log(`RelationshipGrid row → id: ${r.id}, note_id: ${r.note_id}`);
+  });
 }
 
+
+
+  
 /* ---------- Save Handler ---------- */
 async function saveRelationships() {
   try {
