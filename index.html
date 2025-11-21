@@ -783,7 +783,7 @@ async function renderNoteReview() {
             <h4 style="margin:0;">Participants Detected in Note</h4>
             <button id="noteRelationshipsBtn"
                     class="btn btn-sm btn-secondary"
-                    onclick="openNoteRelationshipsTab('${note.id}', '${note.client_id}')">
+                    onclick="openNoteRelationshipsTab('${note.id}', '${note.client_id}', '${note.client_contact_name}', '${note.client_contact_email}')">
               Note Relationships
             </button>
           </div>
@@ -981,13 +981,14 @@ async function deleteNote() {
   renderNoteHistory();
 }
 
-function openNoteRelationshipsTab(noteId, clientId) {
-  console.log("openNoteRelationshipsTab args:", noteId, clientId);
+function openNoteRelationshipsTab(noteId, clientId, contactName, contactEmail) {
+  console.log("openNoteRelationshipsTab args:", noteId, clientId, contactName, contactEmail);
   selectedNoteId = noteId;
   currentClientId = clientId;
-  renderNoteRelationships(noteId, clientId);
+  currentClientName = contactName || "Unknown";
+  currentClientEmail = contactEmail || "Unknown";
+  renderNoteRelationships(noteId, clientId, currentClientName, currentClientEmail);
 }
-
 
 async function renderNoteRelationships(noteId, clientId, contactName, contactEmail) {
   const content = document.getElementById('content');
