@@ -184,7 +184,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.3.38</span>
+      <span class="muted" style="margin-left:12px;">v1.3.39</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -841,19 +841,26 @@ function toggleSetClientForm() {
   form.style.display = form.style.display === "none" ? "block" : "none";
 }
 
+  
 async function findClientContacts() {
   const first = document.getElementById('filter-first').value.trim();
   const last = document.getElementById('filter-last').value.trim();
   const email = document.getElementById('filter-email').value.trim();
 
+  // Validate input
   if (email) {
-    if (email.length < 3) { alert('Email must be at least 3 characters.'); return; }
+    if (email.length < 3) {
+      alert('Email must be at least 3 characters.');
+      return;
+    }
   } else if (!first && !last) {
     alert('Enter at least a first or last name.');
     return;
   }
 
   const params = new URLSearchParams();
+
+  // Flexible filter
   if (email) {
     params.set('project', activeProject);
     params.set('email', `ilike.*${email}*`);
@@ -861,6 +868,7 @@ async function findClientContacts() {
     const filters = [`project.eq.${activeProject}`];
     if (first) filters.push(`first_name.ilike.*${first}*`);
     if (last)  filters.push(`last_name.ilike.*${last}*`);
+
     if (filters.length > 1) {
       params.set('and', `(${filters.join(',')})`);
     } else {
@@ -870,13 +878,19 @@ async function findClientContacts() {
     }
   }
 
+  // Keep type as returned; map to contact_type in PATCH
   const url = `${API_BASE}/contacts?${params.toString()}&select=contact_id,first_name,last_name,email,type`;
   console.log('Contacts fetch (Note Review):', url);
 
   let res;
-  try { res = await fetch(url); } catch (e) {
-    alert('Network error searching contacts'); console.error(e); return;
+  try {
+    res = await fetch(url);
+  } catch (e) {
+    alert('Network error searching contacts');
+    console.error(e);
+    return;
   }
+
   if (!res.ok) {
     const msg = await res.text().catch(() => '');
     alert(`Search failed (${res.status}). ${msg}`);
@@ -885,16 +899,63 @@ async function findClientContacts() {
 
   const rows = await res.json();
   const container = document.getElementById('clientSearchResults');
+
   container.innerHTML = rows.length > 0
     ? rows.map(r => {
         const fullName = `${r.first_name || ''} ${r.last_name || ''}`.trim();
         const typeLabel = r.type ? r.type.toLowerCase() : 'contact';
         const emailSafe = r.email || '';
+
         return `
           <div style="padding:8px; border-bottom:1px solid #eee; cursor:pointer;"
                onclick="attachClientToNote('${r.contact_id}', '${fullName}', '${typeLabel}', '${emailSafe}')">
             <strong>${fullName}</strong>
-            <span style="background:#eef
+            <span style="background:#eef; color:#336; padding:2px 6px; border-radius:12px; font-size:0.75em; margin-left:6px;">
+              ${typeLabel}
+            </span><br/>
+            <small>${emailSafe}</small>
+          </div>
+        `;
+      }).join('')
+    : `<div class="muted">No contacts found.</div>`;
+}
+
+async function attachClientToNote(contactId, contactName, contactType, contactEmail) {
+  try {
+    const res = await fetch(
+      `https://notes-history-module.dennis-e64.workers.dev?project=${encodeURIComponent(activeProject)}&id=eq.${selectedNoteId}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contact_id: contactId,
+          contact_name: contactName,
+          contact_type: contactType,
+          contact_email: contactEmail || null,
+          updated_at: new Date().toISOString()
+        })
+      }
+    );
+
+    if (!res.ok) {
+      const msg = await res.text().catch(() => "");
+      alert(`❌ Failed to attach client (${res.status}). ${msg}`);
+      console.error("Attach client error:", msg);
+      return;
+    }
+
+    alert(`✅ Client set: ${contactName} (${contactType})`);
+
+    const form = document.getElementById("setClientForm");
+    if (form) form.style.display = "none";
+
+    await renderNoteReview();
+  } catch (err) {
+    alert("❌ Network error attaching client");
+    console.error("Attach client exception:", err);
+  }
+}
+
   
   
 function openSetClientForm() {
@@ -914,14 +975,18 @@ async function deleteNote() {
   renderNoteHistory();
 }
 
-function openNoteRelationshipsTab(noteId, contactId, contactName, contactEmail) {
-  console.log("openNoteRelationshipsTab args:", noteId, contactId, contactName, contactEmail);
+function openNoteRelationshipsTab(noteId, contactId, contactName, contactEmail, contactType) {
+  console.log("openNoteRelationshipsTab args:", noteId, contactId, contactName, contactEmail, contactType);
+
   selectedNoteId = noteId;
   currentContactId = contactId;
   currentContactName = contactName || "Unknown";
   currentContactEmail = contactEmail || "Unknown";
+  currentContactType = contactType || "Unknown";
+
   renderNoteRelationships(noteId, contactId, currentContactName, currentContactEmail);
 }
+
 
 
 async function renderNoteRelationships(noteId, contactId, contactName, contactEmail) {
@@ -938,6 +1003,7 @@ async function renderNoteRelationships(noteId, contactId, contactName, contactEm
 
     const noteRows = Array.isArray(relData.relationships) ? relData.relationships : [];
 
+    // If you have a lookup fetcher, call it here
     const lookups = await fetchLookups(activeProject);
     console.log("Lookups fetched:", lookups);
 
@@ -948,6 +1014,7 @@ async function renderNoteRelationships(noteId, contactId, contactName, contactEm
     content.innerHTML = `<div class="card">❌ Error loading relationships: ${err.message}</div>`;
   }
 }
+
 
 
 
@@ -1036,6 +1103,7 @@ function renderNoteRelationshipGrid(rows, types, roles, contactId, contactName, 
 /* ---------- Save Handler ---------- */
 async function saveNoteRelationships() {
   const rows = [...document.querySelectorAll('#content tbody tr')];
+
   const updates = rows
     .filter(row => row.querySelector('[data-field="promote"]')?.checked)
     .map(row => ({
