@@ -184,7 +184,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.3.38</span>
+      <span class="muted" style="margin-left:12px;">v1.3.34</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -734,21 +734,14 @@ async function renderNoteReview() {
     const note = data.notes.find(n => n.id === selectedNoteId);
     if (!note) throw new Error("Note not found");
 
-    // ✅ Set currentClientId so relationships tab has it
-    currentClientId = note.client_id || null;
-
     let relationships = [];
     try {
       const relRes = await fetch(
         `https://notes-history-module.dennis-e64.workers.dev?project=${encodeURIComponent(activeProject)}&note_id=eq.${selectedNoteId}&table=notes_relationships`
       );
-      if (relRes.ok) {
-        const relData = await relRes.json();
-        if (relData.status === "ok" && Array.isArray(relData.notes)) {
-          relationships = relData.notes;
-        }
-      } else {
-        console.warn("Relationships fetch failed:", await relRes.text());
+      const relData = await relRes.json();
+      if (relData.status === "ok" && Array.isArray(relData.notes)) {
+        relationships = relData.notes;
       }
     } catch (err) {
       console.warn("Failed to load relationships:", err);
@@ -765,7 +758,7 @@ async function renderNoteReview() {
         <p><strong>Subject:</strong> ${note.subject || "(no subject)"}</p>
         <p><strong>From:</strong> ${note.from_name || ""} (${note.from_email || ""})</p>
         <p><strong>Created:</strong> ${new Date(note.created_at).toLocaleString()}</p>
-        <p><strong>Client:</strong> ${note.client_contact_name || "(not set)"} (${note.client_contact_email || ""})</p>
+        <p><strong>Client:</strong> ${note.client_contact_name || "(not set)"}</p>
         <p><strong>Status:</strong> ${note.review_status || "pending"} • Needs review: ${note.needs_review ? "Yes" : "No"}</p>
         <hr />
         <p><strong>Summary:</strong></p>
@@ -819,12 +812,15 @@ async function renderNoteReview() {
       `;
     }
 
+    // Diagnostic logging
     console.log("NoteReview → note.id:", note.id, "note.client_id:", note.client_id);
+    relationships.forEach(r => {
+      console.log(`NoteReview row → id: ${r.id}, note_id: ${r.note_id}`);
+    });
   } catch (err) {
     content.innerHTML = `<div class="card">Error loading note: ${err.message}</div>`;
   }
 }
-
 
 
   
@@ -989,109 +985,31 @@ function openNoteRelationshipsTab(noteId, clientId) {
 
 
   
-/* ---------- Note Relationships Renderer ---------- */
 async function renderNoteRelationships(noteId, clientId) {
   const content = document.getElementById('content');
-  content.innerHTML = `<div class="card loader">Loading relationships...</div>`;
+  content.innerHTML = `<div class="card loader">Loading Note Relationships...</div>`;
 
-  let rows = [];
   try {
-    const relRes = await fetch(`${API_BASE}/notes_relationships?project=${activeProject}&note_id=eq.${noteId}`);
-    if (relRes.ok) {
-      const relData = await relRes.json();
-      rows = Array.isArray(relData) ? relData : [];
-    } else {
-      console.warn("Relationships fetch failed:", await relRes.text());
-    }
+    // Fetch relationships from your Worker API
+    const url = `${API_BASE}/note_relationships?project=${encodeURIComponent(activeProject)}&note_id=${encodeURIComponent(noteId)}`;
+    console.log("Fetching relationships from:", url);
+
+    const relRes = await fetch(url);
+    const relData = await relRes.json();
+    console.log("Fetched relationships response:", relData);
+
+    const noteRows = Array.isArray(relData.relationships) ? relData.relationships : [];
+
+    // Fetch dropdown values
+    const lookups = await fetchLookups(activeProject);
+    console.log("Lookups fetched:", lookups);
+
+    // Render the grid with real rows
+    renderNoteRelationshipGrid(noteRows, lookups.types, lookups.roles, clientId);
   } catch (err) {
-    console.warn("Relationships fetch exception:", err);
+    console.error("Error loading relationships:", err);
+    content.innerHTML = `<div class="card">❌ Error loading relationships: ${err.message}</div>`;
   }
-
-  // Fetch lookups
-  const [typesRes, rolesRes] = await Promise.all([
-    fetch(`${API_BASE}/lookups?project=${activeProject}&type=relationship_type`),
-    fetch(`${API_BASE}/lookups?project=${activeProject}&type=relationship_role`)
-  ]);
-  const typesJson = await typesRes.json().catch(() => ({}));
-  const rolesJson = await rolesRes.json().catch(() => ({}));
-  const types = Array.isArray(typesJson.values) ? typesJson.values.map(v => v.value) : [];
-  const roles = Array.isArray(rolesJson.values) ? rolesJson.values.map(v => v.value) : [];
-
-  // Fetch contact info
-  let contactName = "Unknown";
-  let contactEmail = "Unknown";
-  if (clientId) {
-    const contactRes = await fetch(`${API_BASE}/contacts?project=${activeProject}&contact_id=eq.${clientId}`);
-    if (contactRes.ok) {
-      const contactData = await contactRes.json();
-      const contact = Array.isArray(contactData) ? contactData[0] : null;
-      if (contact) {
-        contactName = `${contact.first_name || ""} ${contact.last_name || ""}`.trim();
-        contactEmail = contact.email || "Unknown";
-      }
-    }
-  }
-
-  renderNoteRelationshipGrid(rows, types, roles, clientId, contactName, contactEmail);
-}
-
-
-/* ---------- Grid Renderer ---------- */
-function renderNoteRelationshipGrid(rows, types, roles, clientId, contactName, contactEmail) {
-  const content = document.getElementById('content');
-
-  const tableHtml = `
-    <div class="card">
-      <h3>Note Relationships For ${contactName || "Unknown"} (${contactEmail || "Unknown"})</h3>
-      <table style="width:100%; border-collapse:collapse;">
-        <thead style="background:#f0f0f0;">
-          <tr>
-            <th style="padding:8px;">Promote</th>
-            <th style="padding:8px;">Raw Name</th>
-            <th style="padding:8px;">AI First</th>
-            <th style="padding:8px;">AI Last</th>
-            <th style="padding:8px;">Role/Type</th>
-            <th style="padding:8px;">Context</th>
-            <th style="padding:8px;">Relationship Type</th>
-            <th style="padding:8px;">Relationship Role</th>
-            <th style="padding:8px;">Email</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${rows.map(r => `
-            <tr data-id="${r.id}">
-              <td style="padding:8px; text-align:center;">
-                <input type="checkbox" data-field="promote" />
-              </td>
-              <td style="padding:8px;">${r.raw_name || ""}</td>
-              <td style="padding:8px;">${r.first_name_ai || ""}</td>
-              <td style="padding:8px;">${r.last_name_ai || ""}</td>
-              <td style="padding:8px;">${r.role_label_ai || ""}</td>
-              <td style="padding:8px;">${r.context_description_ai || ""}</td>
-              <td style="padding:8px;">
-                <select data-field="relationship_type">
-                  ${types.map(t => `<option value="${t}" ${r.relationship_type === t ? "selected" : ""}>${t}</option>`).join("")}
-                </select>
-              </td>
-              <td style="padding:8px;">
-                <select data-field="relationship_role">
-                  ${roles.map(role => `<option value="${role}" ${r.relationship_role === role ? "selected" : ""}>${role}</option>`).join("")}
-                </select>
-              </td>
-              <td style="padding:8px;">
-                <input type="text" data-field="related_email" value="${r.related_email || ""}" />
-              </td>
-            </tr>
-          `).join("")}
-        </tbody>
-      </table>
-      <div style="margin-top:12px;">
-        <button class="primary" onclick="saveNoteRelationships()">Save</button>
-      </div>
-    </div>
-  `;
-
-  content.innerHTML = tableHtml;
 }
 
 
@@ -1123,7 +1041,7 @@ function renderNoteRelationshipGrid(rows, types, roles, clientId, contactName, c
 
   const tableHtml = `
     <div class="card">
-      <h3>Note Relationships For ${contactName || "Unknown"} (${contactEmail || "Unknown"})</h3>
+      <h3>Note Relationships For ${contactName} (${contactEmail})</h3>
       <table style="width:100%; border-collapse:collapse;">
         <thead style="background:#f0f0f0;">
           <tr>
@@ -1174,6 +1092,7 @@ function renderNoteRelationshipGrid(rows, types, roles, clientId, contactName, c
 
   content.innerHTML = tableHtml;
 }
+
 
   
 /* ---------- Save Handler ---------- */
