@@ -184,7 +184,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.3.35</span>
+      <span class="muted" style="margin-left:12px;">v1.3.36</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -220,6 +220,12 @@ let activeSubtab = null;
 let selectedNoteId = null;
 let activeProject = null;
 let projectConfig = null;
+
+let currentContactId = null;
+let currentContactName = null;
+let currentContactEmail = null;
+let currentContactType = null;
+
 
 const API_BASE = 'https://client-portal-api.dennis-e64.workers.dev/api';
 if (!window.activeProject) {
@@ -371,7 +377,7 @@ async function loadTab(id) {
   }
 }
 
- async function loadSubtab(tabKey, subId) {
+async function loadSubtab(tabKey, subId) {
   activeSubtab = subId;
   setActiveSubtabButton(subId);
 
@@ -380,15 +386,15 @@ async function loadTab(id) {
     if (subId === 'history') await renderNoteHistory();
     if (subId === 'review') await renderNoteReview();
     if (subId === 'relationships') {
-      if (selectedNoteId && currentClientId) {
-        await renderNoteRelationships(selectedNoteId, currentClientId, currentClientName, currentClientEmail);
-
+      if (selectedNoteId && currentContactId) {
+        await renderNoteRelationships(selectedNoteId, currentContactId, currentContactName, currentContactEmail);
       } else {
         document.getElementById('content').innerHTML = `<div class="card">❌ No note selected. Use Note Review first.</div>`;
       }
     }
   }
 }
+
 
 /* ---------- Contacts ---------- */
 async function renderContacts() {
@@ -675,7 +681,7 @@ function renderNotesTable(notes) {
       <td>${new Date(note.created_at).toLocaleString()}</td>
       <td>${note.subject || "(no subject)"}</td>
       <td>${note.from_name || ""}</td>
-      <td>${note.client_contact_name || ""}</td>
+      <td>${note.contact_name || ""}</td>
       <td>${note.needs_review ? "Yes" : "No"}</td>
       <td>
         <button onclick="reviewNote('${note.id}')">Review</button>
@@ -684,6 +690,7 @@ function renderNotesTable(notes) {
     tableBody.appendChild(row);
   });
 }
+
 
 async function reviewNote(noteId) {
   selectedNoteId = noteId;
@@ -728,16 +735,16 @@ async function renderNoteReview() {
       `https://notes-history-module.dennis-e64.workers.dev?project=${encodeURIComponent(activeProject)}&id=eq.${selectedNoteId}`
     );
     const data = await res.json();
-    if (data.status !== "ok" || !Array.isArray(data.notes)) {
-      throw new Error("Invalid response");
-    }
+    if (data.status !== "ok" || !Array.isArray(data.notes)) throw new Error("Invalid response");
 
     const note = data.notes.find(n => n.id === selectedNoteId);
     if (!note) throw new Error("Note not found");
 
-    currentClientId = note.client_id || null;
-    currentClientName = note.client_contact_name || "Unknown";
-    currentClientEmail = note.client_contact_email || "Unknown";
+    // Unified state
+    currentContactId = note.contact_id || null;
+    currentContactName = note.contact_name || "Unknown";
+    currentContactEmail = note.contact_email || "Unknown";
+    currentContactType = note.contact_type || "Unknown";
 
     let relationships = [];
     try {
@@ -763,7 +770,8 @@ async function renderNoteReview() {
         <p><strong>Subject:</strong> ${note.subject || "(no subject)"}</p>
         <p><strong>From:</strong> ${note.from_name || ""} (${note.from_email || ""})</p>
         <p><strong>Created:</strong> ${new Date(note.created_at).toLocaleString()}</p>
-        <p><strong>Client:</strong> ${note.client_contact_name || "(not set)"}</p>
+        <p><strong>Client:</strong> ${note.contact_name || "(not set)"} (${note.contact_type || "Unknown"})</p>
+        <p><strong>Email:</strong> ${note.contact_email || ""}</p>
         <p><strong>Status:</strong> ${note.review_status || "pending"} • Needs review: ${note.needs_review ? "Yes" : "No"}</p>
         <hr />
         <p><strong>Summary:</strong></p>
@@ -775,7 +783,7 @@ async function renderNoteReview() {
       </div>
     `;
 
-    // Render relationships table if present
+    // Relationships CTA with unified fields
     if (relationships.length > 0) {
       content.innerHTML += `
         <div class="card" style="margin-top:16px;">
@@ -783,7 +791,7 @@ async function renderNoteReview() {
             <h4 style="margin:0;">Participants Detected in Note</h4>
             <button id="noteRelationshipsBtn"
                     class="btn btn-sm btn-secondary"
-                    onclick="openNoteRelationshipsTab('${note.id}', '${note.client_id}', '${note.client_contact_name}', '${note.client_contact_email}')">
+                    onclick="openNoteRelationshipsTab('${note.id}', '${note.contact_id}', '${note.contact_name}', '${note.contact_email}')">
               Note Relationships
             </button>
           </div>
@@ -817,8 +825,8 @@ async function renderNoteReview() {
       `;
     }
 
-    // Diagnostic logging
-    console.log("NoteReview → note.id:", note.id, "note.client_id:", note.client_id);
+    // Diagnostics
+    console.log("NoteReview → note.id:", note.id, "note.contact_id:", note.contact_id);
     relationships.forEach(r => {
       console.log(`NoteReview row → id: ${r.id}, note_id: ${r.note_id}`);
     });
@@ -841,10 +849,7 @@ async function findClientContacts() {
 
   // Validate input
   if (email) {
-    if (email.length < 3) {
-      alert('Email must be at least 3 characters.');
-      return;
-    }
+    if (email.length < 3) { alert('Email must be at least 3 characters.'); return; }
   } else if (!first && !last) {
     alert('Enter at least a first or last name.');
     return;
@@ -852,7 +857,7 @@ async function findClientContacts() {
 
   const params = new URLSearchParams();
 
-  // Build flexible filter
+  // Flexible filter
   if (email) {
     params.set('project', activeProject);
     params.set('email', `ilike.*${email}*`);
@@ -870,6 +875,7 @@ async function findClientContacts() {
     }
   }
 
+  // Keep type as returned; you’ll map to contact_type in PATCH
   const url = `${API_BASE}/contacts?${params.toString()}&select=contact_id,first_name,last_name,email,type`;
   console.log('Contacts fetch (Note Review):', url);
 
@@ -894,23 +900,23 @@ async function findClientContacts() {
     ? rows.map(r => {
         const fullName = `${r.first_name || ''} ${r.last_name || ''}`.trim();
         const typeLabel = r.type ? r.type.toLowerCase() : 'contact';
+        const emailSafe = r.email || '';
 
         return `
           <div style="padding:8px; border-bottom:1px solid #eee; cursor:pointer;"
-               onclick="attachClientToNote('${r.contact_id}', '${fullName}', '${typeLabel}')">
+               onclick="attachClientToNote('${r.contact_id}', '${fullName}', '${typeLabel}', '${emailSafe}')">
             <strong>${fullName}</strong>
             <span style="background:#eef; color:#336; padding:2px 6px; border-radius:12px; font-size:0.75em; margin-left:6px;">
               ${typeLabel}
             </span><br/>
-            <small>${r.email || ''}</small>
+            <small>${emailSafe}</small>
           </div>
         `;
       }).join('')
     : `<div class="muted">No contacts found.</div>`;
 }
 
-  
-async function attachClientToNote(contactId, contactName, contactType) {
+async function attachClientToNote(contactId, contactName, contactType, contactEmail) {
   try {
     const res = await fetch(
       `https://notes-history-module.dennis-e64.workers.dev?project=${encodeURIComponent(activeProject)}&id=eq.${selectedNoteId}`,
@@ -918,9 +924,10 @@ async function attachClientToNote(contactId, contactName, contactType) {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          client_contact_id: contactId,
-          client_contact_name: contactName,
-          client_contact_type: contactType,
+          contact_id: contactId,
+          contact_name: contactName,
+          contact_type: contactType,      // unified
+          contact_email: contactEmail || null, // new field in notes_history
           updated_at: new Date().toISOString()
         })
       }
@@ -933,10 +940,7 @@ async function attachClientToNote(contactId, contactName, contactType) {
       return;
     }
 
-    // Success — give reviewer immediate confirmation
     alert(`✅ Client set: ${contactName} (${contactType})`);
-
-    // Hide the search form and reload the note review
     document.getElementById("setClientForm").style.display = "none";
     await renderNoteReview();
   } catch (err) {
@@ -945,28 +949,11 @@ async function attachClientToNote(contactId, contactName, contactType) {
   }
 }
 
-
-
+  
   
 function openSetClientForm() {
   document.getElementById("setClientForm").style.display = "block";
   document.getElementById("clientSearchInput").focus();
-}
-
-async function attachClientToNote(contactId, contactName, contactType) {
-  await fetch(`https://notes-history-module.dennis-e64.workers.dev?project=${encodeURIComponent(activeProject)}&id=eq.${selectedNoteId}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      client_contact_id: contactId,
-      client_contact_name: contactName,
-      client_contact_type: contactType,
-      updated_at: new Date().toISOString()
-    })
-  });
-
-  document.getElementById("setClientForm").style.display = "none";
-  renderNoteReview();
 }
 
 async function deleteNote() {
@@ -981,21 +968,21 @@ async function deleteNote() {
   renderNoteHistory();
 }
 
-function openNoteRelationshipsTab(noteId, clientId, contactName, contactEmail) {
-  console.log("openNoteRelationshipsTab args:", noteId, clientId, contactName, contactEmail);
+function openNoteRelationshipsTab(noteId, contactId, contactName, contactEmail) {
+  console.log("openNoteRelationshipsTab args:", noteId, contactId, contactName, contactEmail);
   selectedNoteId = noteId;
-  currentClientId = clientId;
-  currentClientName = contactName || "Unknown";
-  currentClientEmail = contactEmail || "Unknown";
-  renderNoteRelationships(noteId, clientId, currentClientName, currentClientEmail);
+  currentContactId = contactId;
+  currentContactName = contactName || "Unknown";
+  currentContactEmail = contactEmail || "Unknown";
+  renderNoteRelationships(noteId, contactId, currentContactName, currentContactEmail);
 }
 
-async function renderNoteRelationships(noteId, clientId, contactName, contactEmail) {
+
+async function renderNoteRelationships(noteId, contactId, contactName, contactEmail) {
   const content = document.getElementById('content');
   content.innerHTML = `<div class="card loader">Loading Note Relationships...</div>`;
 
   try {
-    // Fetch relationships from your Worker API
     const url = `${API_BASE}/note_relationships?project=${encodeURIComponent(activeProject)}&note_id=${encodeURIComponent(noteId)}`;
     console.log("Fetching relationships from:", url);
 
@@ -1005,18 +992,17 @@ async function renderNoteRelationships(noteId, clientId, contactName, contactEma
 
     const noteRows = Array.isArray(relData.relationships) ? relData.relationships : [];
 
-    // Fetch dropdown values
     const lookups = await fetchLookups(activeProject);
     console.log("Lookups fetched:", lookups);
 
-    // Render the grid with real rows
-    renderNoteRelationshipGrid(noteRows, lookups.types, lookups.roles, clientId, contactName, contactEmail);
+    renderNoteRelationshipGrid(noteRows, lookups.types, lookups.roles, contactId, contactName, contactEmail);
 
   } catch (err) {
     console.error("Error loading relationships:", err);
     content.innerHTML = `<div class="card">❌ Error loading relationships: ${err.message}</div>`;
   }
 }
+
 
 
 /* ---------- Lookups ---------- */
@@ -1042,7 +1028,7 @@ async function fetchLookups(project) {
 
 
 /* ---------- Grid Renderer ---------- */
-function renderNoteRelationshipGrid(rows, types, roles, clientId, contactName, contactEmail) {
+function renderNoteRelationshipGrid(rows, types, roles, contactId, contactName, contactEmail) {
   const content = document.getElementById('content');
 
   const tableHtml = `
@@ -1084,7 +1070,7 @@ function renderNoteRelationshipGrid(rows, types, roles, clientId, contactName, c
                 </select>
               </td>
               <td style="padding:8px;">
-                <input type="text" data-field="related_email" value="${r.related_email || ""}" />
+                <input type="text" data-field="contact_email" value="${r.contact_email || ""}" />
               </td>
             </tr>
           `).join("")}
@@ -1105,12 +1091,12 @@ function renderNoteRelationshipGrid(rows, types, roles, clientId, contactName, c
 async function saveNoteRelationships() {
   const rows = [...document.querySelectorAll('#content tbody tr')];
   const updates = rows
-    .filter(row => row.querySelector('[data-field="promote"]')?.checked) // ✅ match data-field
+    .filter(row => row.querySelector('[data-field="promote"]')?.checked)
     .map(row => ({
       id: row.dataset.id,
       relationship_type: row.querySelector('[data-field="relationship_type"]')?.value || null,
       relationship_role: row.querySelector('[data-field="relationship_role"]')?.value || null,
-      relationship_email: row.querySelector('[data-field="related_email"]')?.value.trim() || null
+      contact_email: row.querySelector('[data-field="contact_email"]')?.value.trim() || null
     }));
 
   if (!updates.length) {
