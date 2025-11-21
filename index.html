@@ -184,7 +184,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.3.36</span>
+      <span class="muted" style="margin-left:12px;">v1.3.35</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -1009,10 +1009,7 @@ async function renderNoteRelationships(noteId, clientId, contactName, contactEma
     console.log("Lookups fetched:", lookups);
 
     // Render the grid with real rows
-    //renderNoteRelationshipGrid(noteRows, lookups.types, lookups.roles, clientId);
-    //renderNoteRelationshipGrid(noteRows, lookups.types, lookups.roles, clientId, contactName, contactEmail);
-    
-    renderNoteRelationshipGrid(rows, types, roles, clientId, contactName, contactEmail);
+    renderNoteRelationshipGrid(noteRows, lookups.types, lookups.roles, clientId, contactName, contactEmail);
 
   } catch (err) {
     console.error("Error loading relationships:", err);
