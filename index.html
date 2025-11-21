@@ -184,7 +184,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.3.36</span>
+      <span class="muted" style="margin-left:12px;">v1.3.37</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -692,6 +692,7 @@ function renderNotesTable(notes) {
 }
 
 
+
 async function reviewNote(noteId) {
   selectedNoteId = noteId;
   const reviewBtn = document.querySelector('#subtabs [data-subtab-id="review"]');
@@ -783,7 +784,7 @@ async function renderNoteReview() {
       </div>
     `;
 
-    // Relationships CTA with unified fields
+    // Relationships CTA
     if (relationships.length > 0) {
       content.innerHTML += `
         <div class="card" style="margin-top:16px;">
@@ -791,7 +792,7 @@ async function renderNoteReview() {
             <h4 style="margin:0;">Participants Detected in Note</h4>
             <button id="noteRelationshipsBtn"
                     class="btn btn-sm btn-secondary"
-                    onclick="openNoteRelationshipsTab('${note.id}', '${note.contact_id}', '${note.contact_name}', '${note.contact_email}')">
+                    onclick="openNoteRelationshipsTab('${note.id}', '${note.contact_id}', '${note.contact_name}', '${note.contact_email}', '${note.contact_type}')">
               Note Relationships
             </button>
           </div>
@@ -825,11 +826,7 @@ async function renderNoteReview() {
       `;
     }
 
-    // Diagnostics
     console.log("NoteReview → note.id:", note.id, "note.contact_id:", note.contact_id);
-    relationships.forEach(r => {
-      console.log(`NoteReview row → id: ${r.id}, note_id: ${r.note_id}`);
-    });
   } catch (err) {
     content.innerHTML = `<div class="card">Error loading note: ${err.message}</div>`;
   }
@@ -847,7 +844,6 @@ async function findClientContacts() {
   const last = document.getElementById('filter-last').value.trim();
   const email = document.getElementById('filter-email').value.trim();
 
-  // Validate input
   if (email) {
     if (email.length < 3) { alert('Email must be at least 3 characters.'); return; }
   } else if (!first && !last) {
@@ -856,8 +852,6 @@ async function findClientContacts() {
   }
 
   const params = new URLSearchParams();
-
-  // Flexible filter
   if (email) {
     params.set('project', activeProject);
     params.set('email', `ilike.*${email}*`);
@@ -865,7 +859,6 @@ async function findClientContacts() {
     const filters = [`project.eq.${activeProject}`];
     if (first) filters.push(`first_name.ilike.*${first}*`);
     if (last)  filters.push(`last_name.ilike.*${last}*`);
-
     if (filters.length > 1) {
       params.set('and', `(${filters.join(',')})`);
     } else {
@@ -875,19 +868,13 @@ async function findClientContacts() {
     }
   }
 
-  // Keep type as returned; you’ll map to contact_type in PATCH
   const url = `${API_BASE}/contacts?${params.toString()}&select=contact_id,first_name,last_name,email,type`;
   console.log('Contacts fetch (Note Review):', url);
 
   let res;
-  try {
-    res = await fetch(url);
-  } catch (e) {
-    alert('Network error searching contacts');
-    console.error(e);
-    return;
+  try { res = await fetch(url); } catch (e) {
+    alert('Network error searching contacts'); console.error(e); return;
   }
-
   if (!res.ok) {
     const msg = await res.text().catch(() => '');
     alert(`Search failed (${res.status}). ${msg}`);
@@ -901,21 +888,11 @@ async function findClientContacts() {
         const fullName = `${r.first_name || ''} ${r.last_name || ''}`.trim();
         const typeLabel = r.type ? r.type.toLowerCase() : 'contact';
         const emailSafe = r.email || '';
-
         return `
           <div style="padding:8px; border-bottom:1px solid #eee; cursor:pointer;"
                onclick="attachClientToNote('${r.contact_id}', '${fullName}', '${typeLabel}', '${emailSafe}')">
             <strong>${fullName}</strong>
-            <span style="background:#eef; color:#336; padding:2px 6px; border-radius:12px; font-size:0.75em; margin-left:6px;">
-              ${typeLabel}
-            </span><br/>
-            <small>${emailSafe}</small>
-          </div>
-        `;
-      }).join('')
-    : `<div class="muted">No contacts found.</div>`;
-}
-
+            <span style="background:#eef; color:#336; padding:2px 6px; border-radius
 async function attachClientToNote(contactId, contactName, contactType, contactEmail) {
   try {
     const res = await fetch(
