@@ -184,7 +184,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.3.36</span>
+      <span class="muted" style="margin-left:12px;">v1.3.37</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -734,14 +734,21 @@ async function renderNoteReview() {
     const note = data.notes.find(n => n.id === selectedNoteId);
     if (!note) throw new Error("Note not found");
 
+    // ✅ Set currentClientId so relationships tab has it
+    currentClientId = note.client_id || null;
+
     let relationships = [];
     try {
       const relRes = await fetch(
         `https://notes-history-module.dennis-e64.workers.dev?project=${encodeURIComponent(activeProject)}&note_id=eq.${selectedNoteId}&table=notes_relationships`
       );
-      const relData = await relRes.json();
-      if (relData.status === "ok" && Array.isArray(relData.notes)) {
-        relationships = relData.notes;
+      if (relRes.ok) {
+        const relData = await relRes.json();
+        if (relData.status === "ok" && Array.isArray(relData.notes)) {
+          relationships = relData.notes;
+        }
+      } else {
+        console.warn("Relationships fetch failed:", await relRes.text());
       }
     } catch (err) {
       console.warn("Failed to load relationships:", err);
@@ -758,7 +765,7 @@ async function renderNoteReview() {
         <p><strong>Subject:</strong> ${note.subject || "(no subject)"}</p>
         <p><strong>From:</strong> ${note.from_name || ""} (${note.from_email || ""})</p>
         <p><strong>Created:</strong> ${new Date(note.created_at).toLocaleString()}</p>
-        <p><strong>Client:</strong> ${note.client_contact_name || "(not set)"}</p>
+        <p><strong>Client:</strong> ${note.client_contact_name || "(not set)"} (${note.client_contact_email || ""})</p>
         <p><strong>Status:</strong> ${note.review_status || "pending"} • Needs review: ${note.needs_review ? "Yes" : "No"}</p>
         <hr />
         <p><strong>Summary:</strong></p>
@@ -812,15 +819,12 @@ async function renderNoteReview() {
       `;
     }
 
-    // Diagnostic logging
     console.log("NoteReview → note.id:", note.id, "note.client_id:", note.client_id);
-    relationships.forEach(r => {
-      console.log(`NoteReview row → id: ${r.id}, note_id: ${r.note_id}`);
-    });
   } catch (err) {
     content.innerHTML = `<div class="card">Error loading note: ${err.message}</div>`;
   }
 }
+
 
 
   
@@ -996,18 +1000,17 @@ async function renderNoteRelationships(noteId, clientId) {
       `${API_BASE}/notes_relationships?project=${encodeURIComponent(activeProject)}&note_id=eq.${noteId}`
     );
     if (!relRes.ok) {
-      const msg = await relRes.text(); // handle plain text errors like "Not found"
+      const msg = await relRes.text();
       throw new Error(`Relationships fetch failed (${relRes.status}): ${msg}`);
     }
     const relData = await relRes.json();
     const rows = Array.isArray(relData) ? relData : [];
 
-    // --- Fetch lookups for dropdowns ---
+    // --- Fetch lookups ---
     const [typesRes, rolesRes] = await Promise.all([
       fetch(`${API_BASE}/lookups?project=${encodeURIComponent(activeProject)}&type=relationship_type`),
       fetch(`${API_BASE}/lookups?project=${encodeURIComponent(activeProject)}&type=relationship_role`)
     ]);
-
     const typesJson = await typesRes.json().catch(() => ({}));
     const rolesJson = await rolesRes.json().catch(() => ({}));
     const types = Array.isArray(typesJson.values) ? typesJson.values.map(v => v.value) : [];
@@ -1037,6 +1040,8 @@ async function renderNoteRelationships(noteId, clientId) {
   }
 }
 
+
+/* ---------- Grid Renderer ---------- */
 /* ---------- Grid Renderer ---------- */
 function renderNoteRelationshipGrid(rows, types, roles, clientId, contactName, contactEmail) {
   const content = document.getElementById('content');
