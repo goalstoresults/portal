@@ -184,7 +184,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.3.31</span>
+      <span class="muted" style="margin-left:12px;">v1.3.32</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -1045,6 +1045,7 @@ function renderNoteRelationshipGrid(rows, types, roles, clientId) {
       <table style="width:100%; border-collapse:collapse;">
         <thead style="background:#f0f0f0;">
           <tr>
+            <th style="padding:8px;">Promote</th>
             <th style="padding:8px;">Raw Name</th>
             <th style="padding:8px;">AI First</th>
             <th style="padding:8px;">AI Last</th>
@@ -1053,13 +1054,14 @@ function renderNoteRelationshipGrid(rows, types, roles, clientId) {
             <th style="padding:8px;">Relationship Type</th>
             <th style="padding:8px;">Relationship Role</th>
             <th style="padding:8px;">Email</th>
-            <th style="padding:8px;">Row ID</th>
-            <th style="padding:8px;">Note ID</th>
           </tr>
         </thead>
         <tbody>
           ${rows.map(r => `
             <tr data-id="${r.id}">
+              <td style="padding:8px; text-align:center;">
+                <input type="checkbox" data-field="promote" />
+              </td>
               <td style="padding:8px;">${r.raw_name || ""}</td>
               <td style="padding:8px;">${r.first_name_ai || ""}</td>
               <td style="padding:8px;">${r.last_name_ai || ""}</td>
@@ -1078,8 +1080,6 @@ function renderNoteRelationshipGrid(rows, types, roles, clientId) {
               <td style="padding:8px;">
                 <input type="text" data-field="related_email" value="${r.related_email || ""}" />
               </td>
-              <td style="padding:8px;">${r.id}</td>
-              <td style="padding:8px;">${r.note_id}</td>
             </tr>
           `).join("")}
         </tbody>
@@ -1094,17 +1094,23 @@ function renderNoteRelationshipGrid(rows, types, roles, clientId) {
 }
 
 
-
   
 /* ---------- Save Handler ---------- */
 async function saveRelationships() {
   const rows = [...document.querySelectorAll('#content tbody tr')];
-  const updates = rows.map(row => ({
-    id: row.dataset.id,  // ✅ real Supabase UUID
-    relationship_type: row.querySelector('.rel-type')?.value || null,
-    relationship_role: row.querySelector('.rel-role')?.value || null,
-    relationship_email: row.querySelector('.rel-email')?.value.trim() || null
-  }));
+  const updates = rows
+    .filter(row => row.querySelector('.rel-promote')?.checked) // ✅ only promoted rows
+    .map(row => ({
+      id: row.dataset.id,  // real Supabase UUID
+      relationship_type: row.querySelector('.rel-type')?.value || null,
+      relationship_role: row.querySelector('.rel-role')?.value || null,
+      relationship_email: row.querySelector('.rel-email')?.value.trim() || null
+    }));
+
+  if (!updates.length) {
+    alert("⚠️ No rows selected for promotion.");
+    return;
+  }
 
   console.log("Sending PATCH updates:", updates);
 
