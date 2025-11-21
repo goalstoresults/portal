@@ -184,7 +184,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.3.37</span>
+      <span class="muted" style="margin-left:12px;">v1.3.38</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -994,54 +994,48 @@ async function renderNoteRelationships(noteId, clientId) {
   const content = document.getElementById('content');
   content.innerHTML = `<div class="card loader">Loading relationships...</div>`;
 
+  let rows = [];
   try {
-    // --- Fetch relationships ---
-    const relRes = await fetch(
-      `${API_BASE}/notes_relationships?project=${encodeURIComponent(activeProject)}&note_id=eq.${noteId}`
-    );
-    if (!relRes.ok) {
-      const msg = await relRes.text();
-      throw new Error(`Relationships fetch failed (${relRes.status}): ${msg}`);
+    const relRes = await fetch(`${API_BASE}/notes_relationships?project=${activeProject}&note_id=eq.${noteId}`);
+    if (relRes.ok) {
+      const relData = await relRes.json();
+      rows = Array.isArray(relData) ? relData : [];
+    } else {
+      console.warn("Relationships fetch failed:", await relRes.text());
     }
-    const relData = await relRes.json();
-    const rows = Array.isArray(relData) ? relData : [];
+  } catch (err) {
+    console.warn("Relationships fetch exception:", err);
+  }
 
-    // --- Fetch lookups ---
-    const [typesRes, rolesRes] = await Promise.all([
-      fetch(`${API_BASE}/lookups?project=${encodeURIComponent(activeProject)}&type=relationship_type`),
-      fetch(`${API_BASE}/lookups?project=${encodeURIComponent(activeProject)}&type=relationship_role`)
-    ]);
-    const typesJson = await typesRes.json().catch(() => ({}));
-    const rolesJson = await rolesRes.json().catch(() => ({}));
-    const types = Array.isArray(typesJson.values) ? typesJson.values.map(v => v.value) : [];
-    const roles = Array.isArray(rolesJson.values) ? rolesJson.values.map(v => v.value) : [];
+  // Fetch lookups
+  const [typesRes, rolesRes] = await Promise.all([
+    fetch(`${API_BASE}/lookups?project=${activeProject}&type=relationship_type`),
+    fetch(`${API_BASE}/lookups?project=${activeProject}&type=relationship_role`)
+  ]);
+  const typesJson = await typesRes.json().catch(() => ({}));
+  const rolesJson = await rolesRes.json().catch(() => ({}));
+  const types = Array.isArray(typesJson.values) ? typesJson.values.map(v => v.value) : [];
+  const roles = Array.isArray(rolesJson.values) ? rolesJson.values.map(v => v.value) : [];
 
-    // --- Fetch contact info for header ---
-    let contactName = "Unknown";
-    let contactEmail = "Unknown";
-    if (clientId) {
-      const contactRes = await fetch(
-        `${API_BASE}/contacts?project=${encodeURIComponent(activeProject)}&contact_id=eq.${clientId}`
-      );
-      if (contactRes.ok) {
-        const contactData = await contactRes.json();
-        const contact = Array.isArray(contactData) ? contactData[0] : null;
-        if (contact) {
-          contactName = `${contact.first_name || ""} ${contact.last_name || ""}`.trim();
-          contactEmail = contact.email || "Unknown";
-        }
+  // Fetch contact info
+  let contactName = "Unknown";
+  let contactEmail = "Unknown";
+  if (clientId) {
+    const contactRes = await fetch(`${API_BASE}/contacts?project=${activeProject}&contact_id=eq.${clientId}`);
+    if (contactRes.ok) {
+      const contactData = await contactRes.json();
+      const contact = Array.isArray(contactData) ? contactData[0] : null;
+      if (contact) {
+        contactName = `${contact.first_name || ""} ${contact.last_name || ""}`.trim();
+        contactEmail = contact.email || "Unknown";
       }
     }
-
-    // --- Render grid ---
-    renderNoteRelationshipGrid(rows, types, roles, clientId, contactName, contactEmail);
-  } catch (err) {
-    content.innerHTML = `<div class="card">Error loading relationships: ${err.message}</div>`;
   }
+
+  renderNoteRelationshipGrid(rows, types, roles, clientId, contactName, contactEmail);
 }
 
 
-/* ---------- Grid Renderer ---------- */
 /* ---------- Grid Renderer ---------- */
 function renderNoteRelationshipGrid(rows, types, roles, clientId, contactName, contactEmail) {
   const content = document.getElementById('content');
