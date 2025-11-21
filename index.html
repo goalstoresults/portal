@@ -184,7 +184,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.3.34</span>
+      <span class="muted" style="margin-left:12px;">v1.3.35</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -987,28 +987,33 @@ function openNoteRelationshipsTab(noteId, clientId) {
   
 async function renderNoteRelationships(noteId, clientId) {
   const content = document.getElementById('content');
-  content.innerHTML = `<div class="card loader">Loading Note Relationships...</div>`;
+  content.innerHTML = `<div class="card loader">Loading relationships...</div>`;
 
   try {
-    // Fetch relationships from your Worker API
-    const url = `${API_BASE}/note_relationships?project=${encodeURIComponent(activeProject)}&note_id=${encodeURIComponent(noteId)}`;
-    console.log("Fetching relationships from:", url);
-
-    const relRes = await fetch(url);
+    // Fetch relationships
+    const relRes = await fetch(`${API_BASE}/notes_relationships?project=${encodeURIComponent(activeProject)}&note_id=eq.${noteId}`);
     const relData = await relRes.json();
-    console.log("Fetched relationships response:", relData);
+    const rows = Array.isArray(relData) ? relData : [];
 
-    const noteRows = Array.isArray(relData.relationships) ? relData.relationships : [];
+    // Fetch lookups
+    const [typesRes, rolesRes] = await Promise.all([
+      fetch(`${API_BASE}/lookups?project=${encodeURIComponent(activeProject)}&type=relationship_type`).then(r => r.json()),
+      fetch(`${API_BASE}/lookups?project=${encodeURIComponent(activeProject)}&type=relationship_role`).then(r => r.json())
+    ]);
+    const types = Array.isArray(typesRes.values) ? typesRes.values.map(v => v.value) : [];
+    const roles = Array.isArray(rolesRes.values) ? rolesRes.values.map(v => v.value) : [];
 
-    // Fetch dropdown values
-    const lookups = await fetchLookups(activeProject);
-    console.log("Lookups fetched:", lookups);
+    // Fetch contact info
+    const contactRes = await fetch(`${API_BASE}/contacts?project=${encodeURIComponent(activeProject)}&contact_id=eq.${clientId}`);
+    const contactData = await contactRes.json();
+    const contact = Array.isArray(contactData) ? contactData[0] : null;
+    const contactName = contact ? `${contact.first_name || ""} ${contact.last_name || ""}`.trim() : "Unknown";
+    const contactEmail = contact?.email || "Unknown";
 
-    // Render the grid with real rows
-    renderNoteRelationshipGrid(noteRows, lookups.types, lookups.roles, clientId);
+    // Render grid
+    renderNoteRelationshipGrid(rows, types, roles, clientId, contactName, contactEmail);
   } catch (err) {
-    console.error("Error loading relationships:", err);
-    content.innerHTML = `<div class="card">❌ Error loading relationships: ${err.message}</div>`;
+    content.innerHTML = `<div class="card">Error loading relationships: ${err.message}</div>`;
   }
 }
 
@@ -1041,7 +1046,7 @@ function renderNoteRelationshipGrid(rows, types, roles, clientId, contactName, c
 
   const tableHtml = `
     <div class="card">
-      <h3>Note Relationships For ${contactName} (${contactEmail})</h3>
+      <h3>Note Relationships For ${contactName || "Unknown"} (${contactEmail || "Unknown"})</h3>
       <table style="width:100%; border-collapse:collapse;">
         <thead style="background:#f0f0f0;">
           <tr>
@@ -1092,7 +1097,6 @@ function renderNoteRelationshipGrid(rows, types, roles, clientId, contactName, c
 
   content.innerHTML = tableHtml;
 }
-
 
   
 /* ---------- Save Handler ---------- */
