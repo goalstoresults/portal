@@ -184,7 +184,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.3.35</span>
+      <span class="muted" style="margin-left:12px;">v1.3.36</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -985,36 +985,114 @@ function openNoteRelationshipsTab(noteId, clientId) {
 
 
   
+/* ---------- Note Relationships Renderer ---------- */
 async function renderNoteRelationships(noteId, clientId) {
   const content = document.getElementById('content');
   content.innerHTML = `<div class="card loader">Loading relationships...</div>`;
 
   try {
-    // Fetch relationships
-    const relRes = await fetch(`${API_BASE}/notes_relationships?project=${encodeURIComponent(activeProject)}&note_id=eq.${noteId}`);
+    // --- Fetch relationships ---
+    const relRes = await fetch(
+      `${API_BASE}/notes_relationships?project=${encodeURIComponent(activeProject)}&note_id=eq.${noteId}`
+    );
+    if (!relRes.ok) {
+      const msg = await relRes.text(); // handle plain text errors like "Not found"
+      throw new Error(`Relationships fetch failed (${relRes.status}): ${msg}`);
+    }
     const relData = await relRes.json();
     const rows = Array.isArray(relData) ? relData : [];
 
-    // Fetch lookups
+    // --- Fetch lookups for dropdowns ---
     const [typesRes, rolesRes] = await Promise.all([
-      fetch(`${API_BASE}/lookups?project=${encodeURIComponent(activeProject)}&type=relationship_type`).then(r => r.json()),
-      fetch(`${API_BASE}/lookups?project=${encodeURIComponent(activeProject)}&type=relationship_role`).then(r => r.json())
+      fetch(`${API_BASE}/lookups?project=${encodeURIComponent(activeProject)}&type=relationship_type`),
+      fetch(`${API_BASE}/lookups?project=${encodeURIComponent(activeProject)}&type=relationship_role`)
     ]);
-    const types = Array.isArray(typesRes.values) ? typesRes.values.map(v => v.value) : [];
-    const roles = Array.isArray(rolesRes.values) ? rolesRes.values.map(v => v.value) : [];
 
-    // Fetch contact info
-    const contactRes = await fetch(`${API_BASE}/contacts?project=${encodeURIComponent(activeProject)}&contact_id=eq.${clientId}`);
-    const contactData = await contactRes.json();
-    const contact = Array.isArray(contactData) ? contactData[0] : null;
-    const contactName = contact ? `${contact.first_name || ""} ${contact.last_name || ""}`.trim() : "Unknown";
-    const contactEmail = contact?.email || "Unknown";
+    const typesJson = await typesRes.json().catch(() => ({}));
+    const rolesJson = await rolesRes.json().catch(() => ({}));
+    const types = Array.isArray(typesJson.values) ? typesJson.values.map(v => v.value) : [];
+    const roles = Array.isArray(rolesJson.values) ? rolesJson.values.map(v => v.value) : [];
 
-    // Render grid
+    // --- Fetch contact info for header ---
+    let contactName = "Unknown";
+    let contactEmail = "Unknown";
+    if (clientId) {
+      const contactRes = await fetch(
+        `${API_BASE}/contacts?project=${encodeURIComponent(activeProject)}&contact_id=eq.${clientId}`
+      );
+      if (contactRes.ok) {
+        const contactData = await contactRes.json();
+        const contact = Array.isArray(contactData) ? contactData[0] : null;
+        if (contact) {
+          contactName = `${contact.first_name || ""} ${contact.last_name || ""}`.trim();
+          contactEmail = contact.email || "Unknown";
+        }
+      }
+    }
+
+    // --- Render grid ---
     renderNoteRelationshipGrid(rows, types, roles, clientId, contactName, contactEmail);
   } catch (err) {
     content.innerHTML = `<div class="card">Error loading relationships: ${err.message}</div>`;
   }
+}
+
+/* ---------- Grid Renderer ---------- */
+function renderNoteRelationshipGrid(rows, types, roles, clientId, contactName, contactEmail) {
+  const content = document.getElementById('content');
+
+  const tableHtml = `
+    <div class="card">
+      <h3>Note Relationships For ${contactName || "Unknown"} (${contactEmail || "Unknown"})</h3>
+      <table style="width:100%; border-collapse:collapse;">
+        <thead style="background:#f0f0f0;">
+          <tr>
+            <th style="padding:8px;">Promote</th>
+            <th style="padding:8px;">Raw Name</th>
+            <th style="padding:8px;">AI First</th>
+            <th style="padding:8px;">AI Last</th>
+            <th style="padding:8px;">Role/Type</th>
+            <th style="padding:8px;">Context</th>
+            <th style="padding:8px;">Relationship Type</th>
+            <th style="padding:8px;">Relationship Role</th>
+            <th style="padding:8px;">Email</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(r => `
+            <tr data-id="${r.id}">
+              <td style="padding:8px; text-align:center;">
+                <input type="checkbox" data-field="promote" />
+              </td>
+              <td style="padding:8px;">${r.raw_name || ""}</td>
+              <td style="padding:8px;">${r.first_name_ai || ""}</td>
+              <td style="padding:8px;">${r.last_name_ai || ""}</td>
+              <td style="padding:8px;">${r.role_label_ai || ""}</td>
+              <td style="padding:8px;">${r.context_description_ai || ""}</td>
+              <td style="padding:8px;">
+                <select data-field="relationship_type">
+                  ${types.map(t => `<option value="${t}" ${r.relationship_type === t ? "selected" : ""}>${t}</option>`).join("")}
+                </select>
+              </td>
+              <td style="padding:8px;">
+                <select data-field="relationship_role">
+                  ${roles.map(role => `<option value="${role}" ${r.relationship_role === role ? "selected" : ""}>${role}</option>`).join("")}
+                </select>
+              </td>
+              <td style="padding:8px;">
+                <input type="text" data-field="related_email" value="${r.related_email || ""}" />
+              </td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+      <div style="margin-top:12px;">
+        <button class="primary" onclick="saveNoteRelationships()">Save</button>
+      </div>
+    </div>
+  `;
+
+  content.innerHTML = tableHtml;
 }
 
 
