@@ -184,7 +184,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.3.37</span>
+      <span class="muted" style="margin-left:12px;">v1.3.38</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -693,6 +693,7 @@ function renderNotesTable(notes) {
 
 
 
+
 async function reviewNote(noteId) {
   selectedNoteId = noteId;
   const reviewBtn = document.querySelector('#subtabs [data-subtab-id="review"]');
@@ -833,6 +834,7 @@ async function renderNoteReview() {
 }
 
 
+
   
 function toggleSetClientForm() {
   const form = document.getElementById("setClientForm");
@@ -892,40 +894,7 @@ async function findClientContacts() {
           <div style="padding:8px; border-bottom:1px solid #eee; cursor:pointer;"
                onclick="attachClientToNote('${r.contact_id}', '${fullName}', '${typeLabel}', '${emailSafe}')">
             <strong>${fullName}</strong>
-            <span style="background:#eef; color:#336; padding:2px 6px; border-radius
-async function attachClientToNote(contactId, contactName, contactType, contactEmail) {
-  try {
-    const res = await fetch(
-      `https://notes-history-module.dennis-e64.workers.dev?project=${encodeURIComponent(activeProject)}&id=eq.${selectedNoteId}`,
-      {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contact_id: contactId,
-          contact_name: contactName,
-          contact_type: contactType,      // unified
-          contact_email: contactEmail || null, // new field in notes_history
-          updated_at: new Date().toISOString()
-        })
-      }
-    );
-
-    if (!res.ok) {
-      const msg = await res.text().catch(() => "");
-      alert(`❌ Failed to attach client (${res.status}). ${msg}`);
-      console.error("Attach client error:", msg);
-      return;
-    }
-
-    alert(`✅ Client set: ${contactName} (${contactType})`);
-    document.getElementById("setClientForm").style.display = "none";
-    await renderNoteReview();
-  } catch (err) {
-    alert("❌ Network error attaching client");
-    console.error("Attach client exception:", err);
-  }
-}
-
+            <span style="background:#eef
   
   
 function openSetClientForm() {
