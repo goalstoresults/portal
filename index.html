@@ -184,7 +184,7 @@
   <header>
     <div class="row">
       <h1 id="portal-title">Client Portal</h1>
-      <span class="muted" style="margin-left:12px;">v1.3.33</span>
+      <span class="muted" style="margin-left:12px;">v1.3.34</span>
     </div>
     <div class="row" id="project-selector-row">
       <label for="project-selector" class="muted">Project</label>
@@ -1036,12 +1036,12 @@ async function fetchLookups(project) {
 
 
 /* ---------- Grid Renderer ---------- */
-function renderNoteRelationshipGrid(rows, types, roles, clientId) {
+function renderNoteRelationshipGrid(rows, types, roles, clientId, contactName, contactEmail) {
   const content = document.getElementById('content');
 
   const tableHtml = `
     <div class="card">
-      <h3>Note Relationships</h3>
+      <h3>Note Relationships For ${contactName} (${contactEmail})</h3>
       <table style="width:100%; border-collapse:collapse;">
         <thead style="background:#f0f0f0;">
           <tr>
@@ -1099,12 +1099,12 @@ function renderNoteRelationshipGrid(rows, types, roles, clientId) {
 async function saveNoteRelationships() {
   const rows = [...document.querySelectorAll('#content tbody tr')];
   const updates = rows
-    .filter(row => row.querySelector('.rel-promote')?.checked) // ✅ only promoted rows
+    .filter(row => row.querySelector('[data-field="promote"]')?.checked) // ✅ match data-field
     .map(row => ({
-      id: row.dataset.id,  // real Supabase UUID
-      relationship_type: row.querySelector('.rel-type')?.value || null,
-      relationship_role: row.querySelector('.rel-role')?.value || null,
-      relationship_email: row.querySelector('.rel-email')?.value.trim() || null
+      id: row.dataset.id,
+      relationship_type: row.querySelector('[data-field="relationship_type"]')?.value || null,
+      relationship_role: row.querySelector('[data-field="relationship_role"]')?.value || null,
+      relationship_email: row.querySelector('[data-field="related_email"]')?.value.trim() || null
     }));
 
   if (!updates.length) {
@@ -1135,6 +1135,7 @@ async function saveNoteRelationships() {
     console.error("Save exception:", err);
   }
 }
+
 
 
 
