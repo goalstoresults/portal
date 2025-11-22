@@ -22,7 +22,7 @@
   <main id="tab-content"></main>
 
   <footer>
-    <p>Portal Version: 1.1.3</p>
+    <p>Portal Version: 1.1.4</p>
   </footer>
 
   <script type="module">
@@ -52,12 +52,12 @@
         projectSelect.appendChild(opt);
       });
 
-      // Fallback to "gtr" if no param
+      // Fallback to "gtr" only if no param
       if (!projectParam) {
         projectParam = "gtr";
       }
 
-      // Validate project
+      // Validate projectParam against dropdown
       if (!validIds.includes(projectParam)) {
         document.getElementById("tabs").style.display = "none";
         document.getElementById("tab-content").innerHTML =
