@@ -1,5 +1,5 @@
-// js/notes.js v1.1.3
-// Notes module with full Worker URLs (no /api shorthand)
+// js/notes.js v1.1.4
+// Notes module with full Worker URLs (notes-history-module.dennis-e64.workers.dev)
 
 export async function loadNotesTab({ portalState, tabContent }) {
   await loadPartial("/components/notes.html", tabContent);
@@ -13,7 +13,7 @@ async function loadPartial(url, tabContent) {
     const html = await res.text();
     tabContent.innerHTML = html;
     const header = tabContent.querySelector("h2");
-    if (header) header.textContent = "Notes (v1.1.3)";
+    if (header) header.textContent = "Notes (v1.1.4)";
   } catch (err) {
     tabContent.innerHTML = `<section class="card"><p>Error loading partial (${url}): ${err.message}</p></section>`;
   }
@@ -46,7 +46,7 @@ async function loadNotesSubtab(subtab, portalState) {
   container.innerHTML = `<p>Unknown subtab</p>`;
 }
 
-/* History (GET /notes_history_module) */
+/* History (GET /notes-history-module) */
 async function renderHistory(container, portalState) {
   try {
     const now = new Date(), sevenDaysAgo = new Date(now.getTime() - 7*24*60*60*1000);
@@ -55,7 +55,7 @@ async function renderHistory(container, portalState) {
       start_date: sevenDaysAgo.toISOString(), end_date: now.toISOString(),
       needs_review: "true"
     });
-    const url = `https://client-portal-api.dennis-e64.workers.dev/notes_history_module?${params}`;
+    const url = `https://notes-history-module.dennis-e64.workers.dev?${params}`;
     const res = await fetch(url, { cache: "no-cache" });
     const data = await res.json();
     if (!res.ok || data.status !== "ok" || !Array.isArray(data.notes) || data.notes.length === 0) {
@@ -82,7 +82,7 @@ async function renderHistory(container, portalState) {
   } catch (err) { container.innerHTML = `<p>Error loading history: ${err.message}</p>`; }
 }
 
-/* Add (POST /notes_history_module) */
+/* Add (POST /notes-history-module) */
 function renderAdd(container, portalState) {
   container.innerHTML = `<h4>Add Note</h4>
     <textarea id="noteContent" placeholder="Enter note text..." style="width:100%;min-height:100px;"></textarea>
@@ -92,7 +92,7 @@ function renderAdd(container, portalState) {
     const content = document.getElementById("noteContent").value.trim();
     if (!content) return;
     try {
-      const res = await fetch("https://client-portal-api.dennis-e64.workers.dev/notes_history_module", {
+      const res = await fetch("https://notes-history-module.dennis-e64.workers.dev", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ project: portalState.project, content })
       });
@@ -103,7 +103,7 @@ function renderAdd(container, portalState) {
   });
 }
 
-/* Review (GET /note_review_module) */
+/* Review (GET /note_review) */
 function renderReview(container, portalState) {
   if (!portalState.selectedNoteId) { container.innerHTML = `<p>Select a note from History to review.</p>`; return; }
   container.innerHTML = `<h4>Review</h4><p>Note ID: ${portalState.selectedNoteId}</p>
@@ -112,7 +112,7 @@ function renderReview(container, portalState) {
   document.getElementById("btnReviewFetch").addEventListener("click", async () => {
     try {
       const params = new URLSearchParams({ project: portalState.project, id: portalState.selectedNoteId });
-      const url = `https://client-portal-api.dennis-e64.workers.dev/note_review_module?${params}`;
+      const url = `https://notes-history-module.dennis-e64.workers.dev/note_review?${params}`;
       const res = await fetch(url, { cache: "no-cache" }); const data = await res.json();
       const result = document.getElementById("reviewResult");
       if (res.ok && (data.success || data.status==="ok") && data.note) {
@@ -122,7 +122,7 @@ function renderReview(container, portalState) {
   });
 }
 
-/* Relationships (GET /note_relationships_module) */
+/* Relationships (GET /note_relationships) */
 function renderRelationships(container, portalState) {
   if (!portalState.selectedNoteId) { container.innerHTML = `<p>Select a note from History to view relationships.</p>`; return; }
   container.innerHTML = `<h4>Relationships</h4><p>Note ID: ${portalState.selectedNoteId}</p>
@@ -131,7 +131,7 @@ function renderRelationships(container, portalState) {
   document.getElementById("btnRelFetch").addEventListener("click", async () => {
     try {
       const params = new URLSearchParams({ project: portalState.project, note_id: portalState.selectedNoteId });
-      const url = `https://client-portal-api.dennis-e64.workers.dev/note_relationships_module?${params}`;
+      const url = `https://notes-history-module.dennis-e64.workers.dev/note_relationships?${params}`;
       const res = await fetch(url, { cache: "no-cache" }); const data = await res.json();
       const result = document.getElementById("relResult");
       if (res.ok && data.status==="ok" && Array.isArray(data.relationships)) {
