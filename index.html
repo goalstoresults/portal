@@ -22,7 +22,7 @@
   <div id="tab-content"></div>
 
   <footer style="margin-top:20px; text-align:center; color:#666;">
-    <small>Portal Version: 1.0.8</small>
+    <small>Portal Version: 1.0.9</small>
   </footer>
 
   <script>
@@ -154,7 +154,17 @@
 
         container.innerHTML = `<p>Unknown subtab</p>`;
       }
-      
+      async function loadPartial(url) {
+      try {
+        const res = await fetch(url, { cache: "no-cache" });
+        if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+        const html = await res.text();
+        tabContent.innerHTML = html;
+      } catch (err) {
+        tabContent.innerHTML = `<section class="card"><p>Error loading partial (${url}): ${err.message}</p></section>`;
+      }
+    }
+
 
       function initNotes() {
         const container = document.getElementById("notesContent");
