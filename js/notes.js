@@ -1,29 +1,52 @@
-// notes.js v1.1.3
+// notes.js v1.1.4
+// Change: Do not auto-render the Add subtab. Subtab area stays blank until a button is clicked.
 
 export async function loadNotesTab({ portalState, tabContent }) {
   tabContent.innerHTML = `
     <section class="card">
-      <h2>Notes (v1.0.8)</h2>
+      <h2>Notes (v1.1.4)</h2>
       <div class="tabs">
-        <button id="tabAdd" class="primary">Add</button>
+        <button id="tabAdd">Add</button>
         <button id="tabHistory">History</button>
         <button id="tabReview">Review</button>
         <button id="tabRelationships">Relationships</button>
       </div>
-      <div id="notesSubtab"></div>
+      <div id="notesSubtab" style="min-height: 60px;"></div>
     </section>
   `;
 
   const notesSubtab = document.getElementById("notesSubtab");
 
-  // Wire subtabs
-  document.getElementById("tabAdd").addEventListener("click", () => renderAdd(notesSubtab, portalState));
-  document.getElementById("tabHistory").addEventListener("click", () => renderHistory(notesSubtab, portalState));
-  document.getElementById("tabReview").addEventListener("click", () => renderReview(notesSubtab, portalState));
-  document.getElementById("tabRelationships").addEventListener("click", () => renderRelationships(notesSubtab, portalState));
+  // Utility to mark active tab button
+  function setActive(tabId) {
+    document.querySelectorAll(".tabs button").forEach(btn => {
+      btn.classList.toggle("primary", btn.id === tabId);
+    });
+  }
 
-  // Default to Add
-  renderAdd(notesSubtab, portalState);
+  // Wire subtabs (no default render)
+  document.getElementById("tabAdd").addEventListener("click", () => {
+    setActive("tabAdd");
+    renderAdd(notesSubtab, portalState);
+  });
+
+  document.getElementById("tabHistory").addEventListener("click", () => {
+    setActive("tabHistory");
+    renderHistory(notesSubtab, portalState);
+  });
+
+  document.getElementById("tabReview").addEventListener("click", () => {
+    setActive("tabReview");
+    renderReview(notesSubtab, portalState);
+  });
+
+  document.getElementById("tabRelationships").addEventListener("click", () => {
+    setActive("tabRelationships");
+    renderRelationships(notesSubtab, portalState);
+  });
+
+  // Leave the subtab area blank until a button is clicked
+  notesSubtab.innerHTML = "";
 }
 
 /* -------------------------
@@ -87,14 +110,21 @@ function renderHistory(container, portalState) {
   `;
 
   const project = portalState.project;
-  fetch(`https://client-portal-api.dennis-e64.workers.dev/api/notes_history?project=${project}`)
+  if (!project) {
+    document.getElementById("noteHistoryResult").textContent = "Error: Missing project.";
+    return;
+  }
+
+  fetch(`https://client-portal-api.dennis-e64.workers.dev/api/notes_history?project=${encodeURIComponent(project)}`)
     .then(res => res.json())
     .then(data => {
       console.log("📜 History response:", data);
       if (data.status === "ok") {
-        const notes = data.notes;
+        const notes = data.notes || [];
         document.getElementById("noteHistoryResult").innerHTML =
-          notes.map(n => `<p><strong>${n.created_at}</strong>: ${n.note_text}</p>`).join("");
+          notes.length
+            ? notes.map(n => `<p><strong>${n.created_at}</strong>: ${n.note_text}</p>`).join("")
+            : "<em>No notes found.</em>";
       } else {
         document.getElementById("noteHistoryResult").textContent = `Error: ${data.error}`;
       }
