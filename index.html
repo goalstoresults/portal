@@ -10,40 +10,54 @@
     <h1 id="portal-title">Client Portal</h1>
     <div id="project-selector-row">
       <label for="project-selector">Project:</label>
-      <select id="project-selector">
-        <option value="gtr">Goals To Results</option>
-      </select>
+      <select id="project-selector"></select>
     </div>
   </header>
 
-  <!-- Tabs shell -->
-  <nav id="tabs">
-    <button data-tab="contacts">Contacts</button>
-    <!-- other tabs omitted for now -->
-  </nav>
-
-  <!-- Tab content container -->
-  <div id="tab-content">
-    <section class="card">
-      <h3>Contacts Placeholder</h3>
-      <p>This is just a shell. No JS modules are wired yet.</p>
-    </section>
-  </div>
-
-  <!-- Version section -->
+  <!-- Version -->
   <footer style="margin-top:20px; text-align:center; color:#666;">
     <small>Portal Version: 1.0.0</small>
   </footer>
 
   <script>
-    // Minimal script: update title when project changes
-    const sel = document.getElementById("project-selector");
-    sel.addEventListener("change", () => {
-      const selectedName = sel.options[sel.selectedIndex].text;
-      document.getElementById("portal-title").textContent = selectedName;
-      document.getElementById("page-title").textContent = selectedName;
-    });
+    const portalTitle = document.getElementById("portal-title");
+    const pageTitle = document.getElementById("page-title");
+    const projectSelector = document.getElementById("project-selector");
+
+    async function loadProjects() {
+      try {
+        const res = await fetch("https://client-portal-api.dennis-e64.workers.dev/api/projects");
+        const projects = await res.json();
+
+        if (!Array.isArray(projects) || projects.length === 0) {
+          throw new Error("No projects returned");
+        }
+
+        // Populate dropdown
+        projectSelector.innerHTML = projects
+          .map(p => `<option value="${p.project_id}">${p.project_name}</option>`)
+          .join("");
+
+        // Set initial title
+        const firstName = projects[0]?.project_name || "Client Portal";
+        portalTitle.textContent = firstName;
+        pageTitle.textContent = firstName;
+
+        // Update title on change
+        projectSelector.addEventListener("change", () => {
+          const selectedName = projectSelector.options[projectSelector.selectedIndex].text;
+          portalTitle.textContent = selectedName;
+          pageTitle.textContent = selectedName;
+        });
+      } catch (err) {
+        console.error("Failed to load projects", err);
+        projectSelector.innerHTML = `<option disabled>Error loading projects</option>`;
+      }
+    }
+
+    loadProjects();
   </script>
 </body>
 </html>
+
 
