@@ -22,7 +22,7 @@
   <div id="tab-content"></div>
 
   <footer style="margin-top:20px; text-align:center; color:#666;">
-    <small>Portal Version: 1.0.10</small>
+    <small>Portal Version: 1.0.11</small>
   </footer>
 
   <script>
@@ -199,12 +199,11 @@
         }
       }
 
-      async function loadTab(tab) {
+async function loadTab(tab) {
   if (tab !== "notes") return;
 
-  // ✅ If already active, skip reload
-  const activeTab = document.querySelector("#tabs button.primary");
-  if (activeTab && activeTab.dataset.tab === tab) {
+  // ✅ Skip if Notes already loaded
+  if (tabContent.querySelector("#notes-subtabs")) {
     return;
   }
 
@@ -213,20 +212,19 @@
     btn.classList.toggle("primary", btn.dataset.tab === tab)
   );
 
-  // ✅ Clear previous content before injecting
+  // Clear previous content
   tabContent.innerHTML = "";
 
-  // Load partial and initialize Notes
+  // Load Notes partial and initialize
   await loadPartial("notes.html");
   initNotes();
 }
-
 
       document.querySelector("#tabs button[data-tab='notes']").addEventListener("click", () => loadTab("notes"));
 
       window.addEventListener("DOMContentLoaded", async () => {
         await loadProjects();
-        await loadTab("notes");
+        //await loadTab("notes");
       });
     }
   </script>
