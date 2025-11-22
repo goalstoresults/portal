@@ -2,12 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Goals To Results Portal</title>
+  <title id="page-title">Client Portal</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <header>
-    <h1 id="portal-title">Goals To Results Portal</h1>
+    <h1 id="portal-title">Client Portal</h1>
     <div id="project-selector-row">
       <label for="project-selector">Project:</label>
       <select id="project-selector"></select>
@@ -54,8 +54,17 @@
           .join("");
         portalState.project = projects[0]?.project_id || "gtr";
 
+        // Update title dynamically
+        const projectName = projects[0]?.project_name || "Client Portal";
+        document.getElementById("portal-title").textContent = projectName;
+        document.getElementById("page-title").textContent = projectName;
+
         sel.addEventListener("change", () => {
           portalState.project = sel.value;
+          const selectedName = sel.options[sel.selectedIndex].text;
+          document.getElementById("portal-title").textContent = selectedName;
+          document.getElementById("page-title").textContent = selectedName;
+
           const active = document.querySelector("#tabs button.primary")?.dataset.tab;
           if (active) loadTab(active);
         });
