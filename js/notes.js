@@ -1,126 +1,133 @@
-// notes.js v1.0.3
-export async function initNotes(portalState) {
+// notes.js v1.0.8
+export function initNotes(portalState) {
   const container = document.getElementById("notesContent");
   const subtabs = document.querySelectorAll("#notes-subtabs button");
 
   subtabs.forEach(btn => {
-    btn.addEventListener("click", () => {
-      loadSubtab(btn.dataset.subtab, portalState);
-    });
+    btn.addEventListener("click", () => loadNotesSubtab(btn.dataset.subtab, portalState));
   });
 
   // Default view
-  loadSubtab("history", portalState);
+  loadNotesSubtab("history", portalState);
 }
 
-async function loadSubtab(subtab, portalState) {
+async function loadNotesSubtab(subtab, portalState) {
   const container = document.getElementById("notesContent");
+  if (!container) return;
   container.innerHTML = `<p>Loading ${subtab}...</p>`;
 
-  switch (subtab) {
-    case "add":
-      renderAddForm(container, portalState);
-      break;
-    case "history":
-      await renderHistory(container, portalState);
-      break;
-    case "review":
-      await renderReview(container, portalState);
-      break;
-    case "relationships":
-      await renderRelationships(container, portalState);
-      break;
-    default:
-      container.innerHTML = `<p>Unknown subtab</p>`;
-  }
-}
-
-// --- Add Note ---
-function renderAddForm(container, portalState) {
-  container.innerHTML = `
-    <h4>Add Note</h4>
-    <textarea id="noteContent" placeholder="Enter note text..."></textarea>
-    <button id="btnSaveNote" class="primary">Save</button>
-    <div id="noteAddResult"></div>
-  `;
-
-  document.getElementById("btnSaveNote").addEventListener("click", async () => {
-    const content = document.getElementById("noteContent").value;
-    if (!content) return;
-
+  if (subtab === "history") {
     try {
-      const res = await fetch("https://client-portal-api.dennis-e64.workers.dev/api/add_note", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          project: portalState.project,
-          contact_id: portalState.contactId || "demo-contact",
-          content
-        })
-      });
+      const url = `https://client-portal-api.dennis-e64.workers.dev/api/notes?project=${encodeURIComponent(portalState.project)}&contact_id=${encodeURIComponent(portalState.contactId || "")}`;
+      const res = await fetch(url);
       const data = await res.json();
-      document.getElementById("noteAddResult").textContent =
-        data.success ? "Note saved!" : `Error: ${data.error}`;
+      if (!data.success || !Array.isArray(data.notes)) {
+        container.innerHTML = `<p>No notes found.</p>`;
+        return;
+      }
+      container.innerHTML = "<h4>Notes History</h4>";
+      const list = document.createElement("ul");
+      data.notes.forEach(n => {
+        const li = document.createElement("li");
+        const date = n.created_at ? new Date(n.created_at).toLocaleString() : "(no date)";
+        li.textContent = `${date}: ${n.note_text || ""}`;
+        list.appendChild(li);
+      });
+      container.appendChild(list);
     } catch (err) {
-      document.getElementById("noteAddResult").textContent = `Error: ${err.message}`;
+      container.innerHTML = `<p>Error loading history: ${err.message}</p>`;
     }
-  });
-}
-
-// --- Notes History ---
-async function renderHistory(container, portalState) {
-  try {
-    const res = await fetch(
-      `https://client-portal-api.dennis-e64.workers.dev/api/notes?project=${portalState.project}&contact_id=${portalState.contactId || ""}`
-    );
-    const data = await res.json();
-
-    if (!data.success) {
-      container.innerHTML = `<p>No notes found.</p>`;
-      return;
-    }
-
-    container.innerHTML = "<h4>Notes History</h4>";
-    const list = document.createElement("ul");
-    data.notes.forEach(n => {
-      const li = document.createElement("li");
-      li.textContent = `${n.created_at}: ${n.note_text}`;
-      list.appendChild(li);
-    });
-    container.appendChild(list);
-  } catch (err) {
-    container.innerHTML = `<p>Error loading history: ${err.message}</p>`;
+    return;
   }
-}
 
-// --- Review Notes ---
-async function renderReview(container, portalState) {
-  container.innerHTML = "<h4>Review Notes</h4><p>Select a note to review.</p>";
-  // For demo: could fetch a single note by id
-}
-
-// --- Relationships ---
-async function renderRelationships(container, portalState) {
-  try {
-    const res = await fetch(
-      `https://client-portal-api.dennis-e64.workers.dev/api/note_relationships?project=${portalState.project}&note_id=${portalState.contactId || ""}`
-    );
-    const data = await res.json();
-
-    if (data.status !== "ok") {
-      container.innerHTML = `<p>Error loading relationships: ${data.error}</p>`;
-      return;
-    }
-
-    container.innerHTML = "<h4>Note Relationships</h4>";
-    const list = document.createElement("ul");
-    data.relationships.forEach(r => {
-      const li = document.createElement("li");
-      li.textContent = `Contact ${r.contact_id} → Role: ${r.role || "n/a"}`;
-      list.appendChild(li);
+  if (subtab === "add") {
+    container.innerHTML = `
+      <h4>Add Note</h4>
+      <textarea id="noteContent" placeholder="Enter note text..." style="width:100%;min-height:100px;"></textarea>
+      <div style="margin-top:8px;">
+        <button id="btnSaveNote" class="primary">Save</button>
+      </div>
+      <div id="noteAddResult" style="margin-top:8px;"></div>
+    `;
+    document.getElementById("btnSaveNote").addEventListener("click", async () => {
+      const content = document.getElementById("noteContent").value.trim();
+      if (!content) return;
+      try {
+        const res = await fetch("https://client-portal-api.dennis-e64.workers.dev/api/add_note", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            project: portalState.project,
+            contact_id: portalState.contactId || "demo-contact",
+            content
+          })
+        });
+        const data = await res.json();
+        document.getElementById("noteAddResult").textContent =
+          data.success ? "Note saved!" : `Error: ${data.error || "Unknown error"}`;
+      } catch (err) {
+        document.getElementById("noteAddResult").textContent = `Error: ${err.message}`;
+      }
     });
-    container.appendChild(list);
-  } catch (err) {
-    container.innerHTML = `<p>Error loading relationships: ${err.message}</p>`;
+    return;
   }
+
+  if (subtab === "review") {
+    container.innerHTML = `
+      <h4>Review</h4>
+      <p>Enter a note id to fetch review details:</p>
+      <input id="reviewNoteId" placeholder="Note ID" />
+      <button id="btnReviewFetch">Fetch</button>
+      <div id="reviewResult" style="margin-top:8px;"></div>
+    `;
+    document.getElementById("btnReviewFetch").addEventListener("click", async () => {
+      const id = document.getElementById("reviewNoteId").value.trim();
+      if (!id) return;
+      try {
+        const url = `https://client-portal-api.dennis-e64.workers.dev/api/note_review?project=${encodeURIComponent(portalState.project)}&id=${encodeURIComponent(id)}`;
+        const res = await fetch(url);
+        const data = await res.json();
+        const result = document.getElementById("reviewResult");
+        if (data.success && data.note) {
+          result.textContent = `Subject: ${data.note.subject || "(none)"} — Summary: ${data.note.summary || "(none)"}`;
+        } else {
+          result.textContent = `Error: ${data.error || "Not found"}`;
+        }
+      } catch (err) {
+        document.getElementById("reviewResult").textContent = `Error: ${err.message}`;
+      }
+    });
+    return;
+  }
+
+  if (subtab === "relationships") {
+    container.innerHTML = `
+      <h4>Relationships</h4>
+      <p>Enter a note id to fetch relationships:</p>
+      <input id="relNoteId" placeholder="Note ID" />
+      <button id="btnRelFetch">Fetch</button>
+      <div id="relResult" style="margin-top:8px;"></div>
+    `;
+    document.getElementById("btnRelFetch").addEventListener("click", async () => {
+      const noteId = document.getElementById("relNoteId").value.trim();
+      if (!noteId) return;
+      try {
+        const url = `https://client-portal-api.dennis-e64.workers.dev/api/note_relationships?project=${encodeURIComponent(portalState.project)}&note_id=${encodeURIComponent(noteId)}`;
+        const res = await fetch(url);
+        const data = await res.json();
+        const result = document.getElementById("relResult");
+        if (data.status === "ok" && Array.isArray(data.relationships)) {
+          const items = data.relationships.map(r => `id ${r.id ?? "?"}: ${r.relationship_type ?? "type?"} — ${r.relationship_role ?? "role?"} — ${r.related_email ?? "email?"}`);
+          result.innerHTML = items.length ? `<ul>${items.map(i => `<li>${i}</li>`).join("")}</ul>` : "No relationships.";
+        } else {
+          result.textContent = `Error: ${data.error || "Unknown error"}`;
+        }
+      } catch (err) {
+        document.getElementById("relResult").textContent = `Error: ${err.message}`;
+      }
+    });
+    return;
+  }
+
+  container.innerHTML = `<p>Unknown subtab</p>`;
 }
