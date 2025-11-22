@@ -9,7 +9,7 @@
 <body>
   <header>
     <h1 id="portal-title">Client Portal</h1>
-    <div id="project-selector-row">
+    <div id="project-selector-row" style="display:none;">
       <label for="project-selector">Project:</label>
       <select id="project-selector"></select>
     </div>
@@ -22,7 +22,7 @@
   <div id="tab-content"></div>
 
   <footer style="margin-top:20px; text-align:center; color:#666;">
-    <small>Portal Version: 1.1.6</small>
+    <small>Portal Version: 1.1.7</small>
   </footer>
 
   <script type="module">
@@ -32,75 +32,65 @@
     const portalTitle = document.getElementById("portal-title");
     const pageTitle = document.getElementById("page-title");
     const projectSelector = document.getElementById("project-selector");
+    const selectorRow = document.getElementById("project-selector-row");
     const tabs = document.getElementById("tabs");
     const tabContent = document.getElementById("tab-content");
 
     async function loadProjects() {
       try {
-        // Fetch projects
         const res = await fetch("https://client-portal-api.dennis-e64.workers.dev/api/projects_config", { cache: "no-cache" });
         const projects = await res.json();
         if (!Array.isArray(projects) || projects.length === 0) throw new Error("No projects returned");
 
-        // Populate dropdown
-        projectSelector.innerHTML = projects
-          .map(p => `<option value="${p.project}">${p.display_name}</option>`)
-          .join("");
-
-        // Read project from URL
         const urlParams = new URLSearchParams(window.location.search);
         const projectParamRaw = urlParams.get("project");
         let projectParam = projectParamRaw ? projectParamRaw.trim() : "";
 
-        // Rule: if no param, default to "gtr"
-        if (!projectParam) {
-          projectParam = "gtr";
-        }
-
-        // Try to match (case-insensitive)
-        const matchIndex = projects.findIndex(
-          p => String(p.project).toLowerCase() === projectParam.toLowerCase()
-        );
-
-        // If param was present but invalid → block UI
+        const validIds = projects.map(p => String(p.project).toLowerCase());
         const paramWasProvided = !!projectParamRaw;
-        if (paramWasProvided && matchIndex === -1) {
-          tabs.style.display = "none";
-          tabContent.innerHTML =
-            `<section class="card"><p>Invalid project specified. No UI available.</p></section>`;
-          return;
+
+        if (!projectParam) {
+          // No param → show dropdown
+          selectorRow.style.display = "block";
+          projectSelector.innerHTML = projects
+            .map(p => `<option value="${p.project}">${p.display_name}</option>`)
+            .join("");
+
+          const defaultProject = projects.find(p => String(p.project).toLowerCase() === "gtr") || projects[0];
+          portalState.project = defaultProject.project;
+          portalTitle.textContent = defaultProject.display_name || "Client Portal";
+          pageTitle.textContent = defaultProject.display_name || "Client Portal";
+          projectSelector.value = defaultProject.project;
+          tabs.style.display = "block";
+
+          projectSelector.addEventListener("change", () => {
+            const selected = projectSelector.options[projectSelector.selectedIndex];
+            portalState.project = selected.value;
+            portalTitle.textContent = selected.text;
+            pageTitle.textContent = selected.text;
+            tabContent.innerHTML = "";
+          });
+
+        } else {
+          // Param was provided → validate
+          const match = projects.find(p => String(p.project).toLowerCase() === projectParam.toLowerCase());
+          if (!match) {
+            tabs.style.display = "none";
+            tabContent.innerHTML =
+              `<section class="card"><p>Invalid project specified. No UI available.</p></section>`;
+            return;
+          }
+
+          // Valid param → lock project, hide dropdown
+          portalState.project = match.project;
+          portalTitle.textContent = match.display_name || "Client Portal";
+          pageTitle.textContent = match.display_name || "Client Portal";
+          tabs.style.display = "block";
         }
-
-        // Determine the project to use:
-        // - If matched, use it
-        // - Else (no param or default "gtr"), try "gtr"
-        // - Else fall back to first project
-        const gtrIndex = projects.findIndex(p => String(p.project).toLowerCase() === "gtr");
-        const useIndex = matchIndex !== -1 ? matchIndex : (gtrIndex !== -1 ? gtrIndex : 0);
-
-        const chosen = projects[useIndex];
-        portalState.project = chosen.project;
-
-        // Set titles and selector
-        portalTitle.textContent = chosen.display_name || "Client Portal";
-        pageTitle.textContent = chosen.display_name || "Client Portal";
-        projectSelector.value = chosen.project;
-
-        // Show UI
-        tabs.style.display = "block";
-
-        // Dropdown change handler
-        projectSelector.addEventListener("change", () => {
-          const selected = projectSelector.options[projectSelector.selectedIndex];
-          portalState.project = selected.value;
-          portalTitle.textContent = selected.text;
-          pageTitle.textContent = selected.text;
-          tabContent.innerHTML = "";
-        });
 
       } catch (err) {
         console.error("Failed to load projects:", err);
-        projectSelector.innerHTML = `<option disabled>Error loading projects</option>`;
+        selectorRow.style.display = "none";
         tabs.style.display = "none";
         tabContent.innerHTML =
           `<section class="card"><p>Unable to load projects. Please try again later.</p></section>`;
