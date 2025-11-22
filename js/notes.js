@@ -47,39 +47,78 @@ async function loadNotesSubtab(subtab, portalState) {
 }
 
 /* History (GET /notes-history-module) */
+/* History (GET /notes-history-module) */
 async function renderHistory(container, portalState) {
   try {
     const now = new Date(), sevenDaysAgo = new Date(now.getTime() - 7*24*60*60*1000);
     const params = new URLSearchParams({
-      project: portalState.project, table: "notes_history",
-      start_date: sevenDaysAgo.toISOString(), end_date: now.toISOString(),
+      project: portalState.project,
+      table: "notes_history",
+      start_date: sevenDaysAgo.toISOString(),
+      end_date: now.toISOString(),
       needs_review: "true"
     });
     const url = `https://notes-history-module.dennis-e64.workers.dev?${params}`;
     const res = await fetch(url, { cache: "no-cache" });
     const data = await res.json();
+
     if (!res.ok || data.status !== "ok" || !Array.isArray(data.notes) || data.notes.length === 0) {
-      container.innerHTML = `<p>No notes found.</p>`; return;
+      container.innerHTML = `<p>No notes found.</p>`;
+      return;
     }
+
+    // Build table
     container.innerHTML = `<h4>Notes History</h4>`;
-    const list = document.createElement("ul");
-    data.notes.forEach(n => {
-      const li = document.createElement("li");
-      const date = n.created_at ? new Date(n.created_at).toLocaleString() : "(no date)";
-      li.innerHTML = `<span>${date}: ${escapeHtml(n.note_text||"")}</span>
-        <button data-note-id="${n.id||""}" class="secondary" style="margin-left:8px;">Select</button>`;
-      list.appendChild(li);
-    });
-    container.appendChild(list);
-    list.querySelectorAll("button[data-note-id]").forEach(btn =>
+    const table = document.createElement("table");
+    table.className = "notes-table";
+    table.innerHTML = `
+      <thead>
+        <tr>
+          <th>Created</th>
+          <th>Subject</th>
+          <th>From</th>
+          <th>Client</th>
+          <th>Needs Review</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${data.notes.map(n => {
+          const created = n.created_at ? new Date(n.created_at).toLocaleString() : "(no date)";
+          const subject = n.subject || "(no subject)";
+          const from = n.from_name || "(unknown)";
+          const client = n.contact_name || "(unknown)";
+          const needsReview = n.needs_review ? "Yes" : "No";
+          return `
+            <tr>
+              <td>${escapeHtml(created)}</td>
+              <td>${escapeHtml(subject)}</td>
+              <td>${escapeHtml(from)}</td>
+              <td>${escapeHtml(client)}</td>
+              <td>${escapeHtml(needsReview)}</td>
+              <td><button data-note-id="${n.id||""}" class="secondary">Review</button></td>
+            </tr>
+          `;
+        }).join("")}
+      </tbody>
+    `;
+    container.appendChild(table);
+
+    // Wire up Review buttons
+    table.querySelectorAll("button[data-note-id]").forEach(btn =>
       btn.addEventListener("click", () => {
         portalState.selectedNoteId = btn.getAttribute("data-note-id");
-        setSubtabEnabled("review", true); setSubtabEnabled("relationships", true);
-        const info = document.createElement("p"); info.style.marginTop="8px";
-        info.textContent = `Selected note: ${portalState.selectedNoteId}`; container.appendChild(info);
+        setSubtabEnabled("review", true);
+        setSubtabEnabled("relationships", true);
+        const info = document.createElement("p");
+        info.style.marginTop = "8px";
+        info.textContent = `Selected note: ${portalState.selectedNoteId}`;
+        container.appendChild(info);
       })
     );
-  } catch (err) { container.innerHTML = `<p>Error loading history: ${err.message}</p>`; }
+  } catch (err) {
+    container.innerHTML = `<p>Error loading history: ${err.message}</p>`;
+  }
 }
 
 /* Add (POST /notes-history-module) */
