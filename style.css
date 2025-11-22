@@ -26,25 +26,43 @@ header h1 {
   gap: 8px;
 }
 
-/* Tabs */
+/* Tabs styled as folder tabs */
 nav#tabs, nav#subtabs {
   display: flex;
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: 4px;
+  margin-bottom: 0; /* tabs sit flush with content */
+  border-bottom: 1px solid #ccc; /* underline for tab row */
 }
-nav button {
-  padding: 6px 12px;
+
+nav#tabs button,
+nav#subtabs button {
+  padding: 6px 14px;
   border: 1px solid #ccc;
-  background: #fff;
+  border-bottom: none; /* remove bottom so active tab connects to content */
+  background: #eaeaea;
   cursor: pointer;
+  border-top-left-radius: 6px;
+  border-top-right-radius: 6px;
 }
-nav button:hover {
-  background: #eee;
+
+nav#tabs button:hover,
+nav#subtabs button:hover {
+  background: #ddd;
 }
-nav button.primary {
-  background: #4a90e2;
-  color: #fff;
-  border-color: #4a90e2;
+
+nav#tabs button.active,
+nav#subtabs button.active {
+  background: #fff; /* active tab matches content background */
+  border-color: #ccc;
+  border-bottom: 1px solid #fff; /* visually merges with content card */
+  font-weight: 600;
+}
+
+nav#tabs button.disabled,
+nav#subtabs button.disabled {
+  background: #f5f5f5;
+  color: #999;
+  cursor: not-allowed;
 }
 
 /* Cards */
@@ -95,4 +113,52 @@ button {
 #tasksList .card:nth-child(even),
 #notesContent .card:nth-child(even) {
   background: #f9f9f9;
+}
+
+/* Notes History Table */
+.notes-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+  background: #fff;
+  border: 1px solid #ddd;
+}
+.notes-table th, .notes-table td {
+  padding: 8px 10px;
+  border: 1px solid #ddd;
+  text-align: left;
+}
+.notes-table th {
+  background: #f0f0f0;
+  font-weight: 600;
+}
+.notes-table tr:nth-child(even) {
+  background: #fafafa;
+}
+.notes-table button {
+  padding: 4px 8px;
+  font-size: 0.9em;
+  border: 1px solid #4a90e2;
+  background: #4a90e2;
+  color: #fff;
+  border-radius: 3px;
+  cursor: pointer;
+}
+.notes-table button:hover {
+  background: #357ab8;
+}
+
+/* Status messages */
+.status {
+  margin-top: 8px;
+  font-size: 0.9em;
+}
+.status.info {
+  color: #4a90e2;
+}
+.status.success {
+  color: #2d8a34;
+}
+.status.error {
+  color: #c0392b;
 }
