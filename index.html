@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title id="page-title">NEW Client Portal</title>
+  <title id="page-title">Client Portal</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -16,7 +16,7 @@
 
   <!-- Version -->
   <footer style="margin-top:20px; text-align:center; color:#666;">
-    <small>Portal Version: 1.0.0</small>
+    <small>Portal Version: 1.0.1</small>
   </footer>
 
   <script>
@@ -26,20 +26,20 @@
 
     async function loadProjects() {
       try {
-        const res = await fetch("https://client-portal-api.dennis-e64.workers.dev/api/projects");
+        const res = await fetch("https://client-portal-api.dennis-e64.workers.dev/api/projects_config");
         const projects = await res.json();
 
         if (!Array.isArray(projects) || projects.length === 0) {
           throw new Error("No projects returned");
         }
 
-        // Populate dropdown
+        // Populate dropdown with project + display_name
         projectSelector.innerHTML = projects
-          .map(p => `<option value="${p.project_id}">${p.project_name}</option>`)
+          .map(p => `<option value="${p.project}">${p.display_name}</option>`)
           .join("");
 
         // Set initial title
-        const firstName = projects[0]?.project_name || "Client Portal";
+        const firstName = projects[0]?.display_name || "Client Portal";
         portalTitle.textContent = firstName;
         pageTitle.textContent = firstName;
 
@@ -59,5 +59,3 @@
   </script>
 </body>
 </html>
-
-
