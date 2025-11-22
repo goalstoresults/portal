@@ -39,12 +39,19 @@ async function loadNotesSubtab(subtab, portalState) {
   if (!container) return;
   if (!portalState.project) { container.innerHTML = `<p>No project selected.</p>`; return; }
   container.innerHTML = `<p>Loading ${subtab}...</p>`;
+
+  // 🔵 Toggle active class on subtabs
+  document.querySelectorAll("#notes-subtabs button").forEach(btn => btn.classList.remove("active"));
+  const activeBtn = document.querySelector(`#notes-subtabs button[data-subtab="${subtab}"]`);
+  if (activeBtn) activeBtn.classList.add("active");
+
   if (subtab === "history") return renderHistory(container, portalState);
   if (subtab === "add") return renderAdd(container, portalState);
   if (subtab === "review") return renderReview(container, portalState);
   if (subtab === "relationships") return renderRelationships(container, portalState);
   container.innerHTML = `<p>Unknown subtab</p>`;
 }
+
 
 /* History (GET /notes-history-module) */
 /* History (GET /notes-history-module) */
