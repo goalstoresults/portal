@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Client Portal</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <h1 id="portal-title">Client Portal</h1>
+    <div id="project-selector-row">
+      <label for="project-selector">Project</label>
+      <select id="project-selector"></select>
+    </div>
+  </header>
+
+  <!-- Top-level tabs -->
+  <nav id="tabs">
+    <button data-tab="contacts">Contacts</button>
+    <button data-tab="notes">Notes</button>
+    <button data-tab="tasks">Tasks</button>
+    <button data-tab="lookups">Lookups</button>
+    <button data-tab="dashboard">Dashboard</button>
+  </nav>
+
+  <!-- Subtabs (shown only when needed, e.g. Notes) -->
+  <nav id="subtabs" class="hidden"></nav>
+
+  <!-- Main content area -->
+  <main id="content">
+    <div class="card"><p class="muted">Select a tab to start.</p></div>
+  </main>
+
+  <!-- JS loader + modules -->
+  <script type="module">
+    import { loadPartial } from "./js/loader.js";
+
+    // Example state (global portal variables)
+    const portalState = {
+      project: null,
+      contactId: null,
+      contactName: null,
+      contactEmail: null,
+      contactType: null
+    };
+
+    // Wire tab buttons
+    document.querySelectorAll("#tabs button").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const tab = btn.dataset.tab;
+        await loadTab(tab);
+      });
+    });
+
+    async function loadTab(tab) {
+      const content = document.getElementById("content");
+      content.innerHTML = `<div class="card loader">Loading ${tab}...</div>`;
+
+      if (tab === "contacts") {
+        await loadPartial({
+          containerId: "content",
+          url: "./components/contacts.html",
+          vars: portalState,
+          afterLoad: async ({ container }) => {
+            const mod = await import("./js/contacts.js");
+            mod.initContacts({ container, portalState });
+          }
+        });
+      }
+      else if (tab === "notes") {
+        await loadPartial({
+          containerId: "content",
+          url: "./components/notes.html",
+          vars: portalState,
+          afterLoad: async ({ container }) => {
+            const mod = await import("./js/notes.js");
+            mod.initNotes({ container, portalState });
+          }
+        });
+      }
+      else if (tab === "tasks") {
+        await loadPartial({
+          containerId: "content",
+          url: "./components/tasks.html",
+          vars: portalState,
+          afterLoad: async ({ container }) => {
+            const mod = await import("./js/tasks.js");
+            mod.initTasks({ container, portalState });
+          }
+        });
+      }
+      else if (tab === "lookups") {
+        await loadPartial({
+          containerId: "content",
+          url: "./components/lookups.html",
+          vars: portalState,
+          afterLoad: async ({ container }) => {
+            const mod = await import("./js/lookups.js");
+            mod.initLookups({ container, portalState });
+          }
+        });
+      }
+      else if (tab === "dashboard") {
+        await loadPartial({
+          containerId: "content",
+          url: "./components/dashboard.html",
+          vars: portalState,
+          afterLoad: async ({ container }) => {
+            const mod = await import("./js/dashboard.js");
+            mod.initDashboard({ container, portalState });
+          }
+        });
+      }
+    }
+
+    // Bootstrap: auto-load first tab
+    document.querySelector("#tabs button[data-tab='contacts']").click();
+  </script>
+</body>
+</html>
