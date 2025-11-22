@@ -1,4 +1,6 @@
-// js/notes.js v1.1.1
+// js/notes.js v1.1.2
+// Change: Add Note now posts to /api/notes_history (notes_history_module)
+
 export async function loadNotesTab({ portalState, tabContent }) {
   // Load the Notes partial
   await loadPartial("/components/notes.html", tabContent);
@@ -156,7 +158,7 @@ async function renderHistory(container, portalState) {
 }
 
 /* -------------------------
-   Add (POST /add_note)
+   Add (POST /notes_history)
 ------------------------- */
 
 function renderAdd(container, portalState) {
@@ -174,7 +176,7 @@ function renderAdd(container, portalState) {
     if (!content) return;
 
     try {
-      const res = await fetch("https://client-portal-api.dennis-e64.workers.dev/api/add_note", {
+      const res = await fetch("https://client-portal-api.dennis-e64.workers.dev/api/notes_history", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
