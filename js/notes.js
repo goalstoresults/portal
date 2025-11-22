@@ -20,6 +20,9 @@ async function loadPartial(url, tabContent) {
 }
 
 function initNotes(portalState) {
+  const historyBtn = document.querySelector('#notes-subtabs button[data-subtab="history"]');
+  if (historyBtn) historyBtn.classList.add('active');  
+  
   const container = document.getElementById("notesContent");
   if (container) container.innerHTML = `<p>Select a subtab to begin.</p>`;
   document.querySelectorAll("#notes-subtabs button").forEach(btn =>
@@ -35,6 +38,7 @@ function setSubtabEnabled(subtab, enabled) {
 }
 
 async function loadNotesSubtab(subtab, portalState) {
+
   const container = document.getElementById("notesContent");
   if (!container) return;
   if (!portalState.project) { container.innerHTML = `<p>No project selected.</p>`; return; }
@@ -42,6 +46,8 @@ async function loadNotesSubtab(subtab, portalState) {
 
   // 🔵 Toggle active class on subtabs
   document.querySelectorAll("#notes-subtabs button").forEach(btn => btn.classList.remove("active"));
+  document.querySelector(`#notes-subtabs button[data-subtab="${subtab}"]`)?.classList.add('active');
+  
   const activeBtn = document.querySelector(`#notes-subtabs button[data-subtab="${subtab}"]`);
   if (activeBtn) activeBtn.classList.add("active");
 
