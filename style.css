@@ -30,19 +30,20 @@ header h1 {
 nav#tabs, nav#subtabs {
   display: flex;
   gap: 4px;
-  margin-bottom: 0; /* tabs sit flush with content */
-  border-bottom: 1px solid #ccc; /* underline for tab row */
+  margin-bottom: 0;
+  border-bottom: 1px solid #ccc;
 }
 
 nav#tabs button,
 nav#subtabs button {
   padding: 6px 14px;
   border: 1px solid #ccc;
-  border-bottom: none; /* remove bottom so active tab connects to content */
+  border-bottom: none;
   background: #eaeaea;
   cursor: pointer;
   border-top-left-radius: 6px;
   border-top-right-radius: 6px;
+  transition: background 0.2s ease;
 }
 
 nav#tabs button:hover,
@@ -52,10 +53,11 @@ nav#subtabs button:hover {
 
 nav#tabs button.active,
 nav#subtabs button.active {
-  background: #fff; /* active tab matches content background */
-  border-color: #ccc;
-  border-bottom: 1px solid #fff; /* visually merges with content card */
+  background: #4a90e2;
+  color: #fff;
   font-weight: 600;
+  border-color: #4a90e2;
+  border-bottom: 1px solid #fff;
 }
 
 nav#tabs button.disabled,
