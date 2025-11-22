@@ -10,106 +10,40 @@
     <h1 id="portal-title">Client Portal</h1>
     <div id="project-selector-row">
       <label for="project-selector">Project:</label>
-      <select id="project-selector"></select>
+      <select id="project-selector">
+        <option value="gtr">Goals To Results</option>
+      </select>
     </div>
   </header>
 
-  <!-- Top-level tabs -->
+  <!-- Tabs shell -->
   <nav id="tabs">
     <button data-tab="contacts">Contacts</button>
-    <button data-tab="notes">Notes</button>
-    <button data-tab="tasks">Tasks</button>
-    <button data-tab="lookups">Lookups</button>
-    <button data-tab="dashboard">Dashboard</button>
+    <!-- other tabs omitted for now -->
   </nav>
 
   <!-- Tab content container -->
-  <div id="tab-content"></div>
+  <div id="tab-content">
+    <section class="card">
+      <h3>Contacts Placeholder</h3>
+      <p>This is just a shell. No JS modules are wired yet.</p>
+    </section>
+  </div>
 
   <!-- Version section -->
   <footer style="margin-top:20px; text-align:center; color:#666;">
     <small>Portal Version: 1.0.0</small>
   </footer>
 
-  <script type="module">
-    import { loadPartial } from "./loader.js";
-    import { initContacts } from "./contacts.js";
-    import { initNotes } from "./notes.js";
-    import { initTasks } from "./tasks.js";
-    import { initLookups } from "./lookups.js";
-    import { initDashboard } from "./dashboard.js";
-
-    const portalState = {
-      project: "gtr",   // default until dropdown is wired
-      contactId: "",    // set when a contact is selected
-    };
-
-    async function loadProjects() {
-      const sel = document.getElementById("project-selector");
-      try {
-        const res = await fetch("https://client-portal-api.dennis-e64.workers.dev/api/projects");
-        const projects = await res.json();
-        sel.innerHTML = projects
-          .map(p => `<option value="${p.project_id}">${p.project_name}</option>`)
-          .join("");
-        portalState.project = projects[0]?.project_id || "gtr";
-
-        // Update title dynamically
-        const projectName = projects[0]?.project_name || "Client Portal";
-        document.getElementById("portal-title").textContent = projectName;
-        document.getElementById("page-title").textContent = projectName;
-
-        sel.addEventListener("change", () => {
-          portalState.project = sel.value;
-          const selectedName = sel.options[sel.selectedIndex].text;
-          document.getElementById("portal-title").textContent = selectedName;
-          document.getElementById("page-title").textContent = selectedName;
-
-          const active = document.querySelector("#tabs button.primary")?.dataset.tab;
-          if (active) loadTab(active);
-        });
-      } catch (err) {
-        console.error("Failed to load projects", err);
-        sel.innerHTML = `<option disabled>Error loading projects</option>`;
-      }
-    }
-
-    async function loadTab(tab) {
-      const tabMap = {
-        contacts: { url: "contacts.html", afterLoad: initContacts },
-        notes:    { url: "notes.html",    afterLoad: initNotes },
-        tasks:    { url: "tasks.html",    afterLoad: initTasks },
-        lookups:  { url: "lookups.html",  afterLoad: initLookups },
-        dashboard:{ url: "dashboard.html",afterLoad: initDashboard },
-      };
-
-      const config = tabMap[tab];
-      if (!config) return;
-
-      // Highlight active tab
-      document.querySelectorAll("#tabs button").forEach(btn =>
-        btn.classList.toggle("primary", btn.dataset.tab === tab)
-      );
-
-      // Load partial and initialize
-      await loadPartial({
-        containerId: "tab-content",
-        url: config.url,
-        vars: portalState,
-        afterLoad: config.afterLoad,
-      });
-    }
-
-    // Wire up tab buttons
-    document.querySelectorAll("#tabs button").forEach(btn => {
-      btn.addEventListener("click", () => {
-        loadTab(btn.dataset.tab);
-      });
+  <script>
+    // Minimal script: update title when project changes
+    const sel = document.getElementById("project-selector");
+    sel.addEventListener("change", () => {
+      const selectedName = sel.options[sel.selectedIndex].text;
+      document.getElementById("portal-title").textContent = selectedName;
+      document.getElementById("page-title").textContent = selectedName;
     });
-
-    // Initial load
-    await loadProjects();
-    loadTab("contacts");
   </script>
 </body>
 </html>
+
