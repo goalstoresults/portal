@@ -1,4 +1,4 @@
-// js/notes.js v1.1.4
+// js/notes.js v1.1.5
 // Notes module with full Worker URLs (notes-history-module.dennis-e64.workers.dev)
 
 export async function loadNotesTab({ portalState, tabContent }) {
@@ -13,7 +13,7 @@ async function loadPartial(url, tabContent) {
     const html = await res.text();
     tabContent.innerHTML = html;
     const header = tabContent.querySelector("h2");
-    if (header) header.textContent = "Notes (v1.1.4)";
+    if (header) header.textContent = "Notes (v1.1.5)";
   } catch (err) {
     tabContent.innerHTML = `<section class="card"><p>Error loading partial (${url}): ${err.message}</p></section>`;
   }
@@ -92,10 +92,16 @@ function renderAdd(container, portalState) {
     const content = document.getElementById("noteContent").value.trim();
     if (!content) return;
     try {
-      const res = await fetch("https://notes-history-module.dennis-e64.workers.dev", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ project: portalState.project, content })
+      const res = await fetch("https://add-note-module.dennis-e64.workers.dev", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          project: portalState.project,
+          raw_text: content
+          // optional: subject, from_name, from_email, etc.
+        })
       });
+
       const data = await res.json();
       document.getElementById("noteAddResult").textContent =
         data.success || data.status === "ok" ? "Note saved!" : `Error: ${data.error||"Unknown error"}`;
