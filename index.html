@@ -14,7 +14,6 @@
     </div>
   </header>
 
-  <!-- Tabs only render if project is valid -->
   <nav id="tabs" style="display:none;">
     <button data-tab="notes">Notes</button>
     <!-- other tabs go here -->
@@ -23,7 +22,7 @@
   <main id="tab-content"></main>
 
   <footer>
-    <p>Portal Version: 1.1.2</p>
+    <p>Portal Version: 1.1.3</p>
   </footer>
 
   <script type="module">
@@ -39,14 +38,10 @@
       const urlParams = new URLSearchParams(window.location.search);
       let projectParam = urlParams.get("project");
 
-      // Default to gtr if no project param
-      if (!projectParam) {
-        projectParam = "gtr";
-      }
-
-      // Load project list from config
+      // Load project list
       const res = await fetch("/api/projects_config");
       const projects = await res.json().catch(() => []);
+      const validIds = projects.map(p => p.id);
       const projectSelect = document.getElementById("projectSelect");
 
       // Populate dropdown
@@ -57,17 +52,20 @@
         projectSelect.appendChild(opt);
       });
 
-      // Validate projectParam against dropdown
-      const validIds = projects.map(p => p.id);
+      // Fallback to "gtr" if no param
+      if (!projectParam) {
+        projectParam = "gtr";
+      }
+
+      // Validate project
       if (!validIds.includes(projectParam)) {
-        // Invalid project → hide tabs, show message
         document.getElementById("tabs").style.display = "none";
         document.getElementById("tab-content").innerHTML =
           `<section class="card"><p>Invalid project specified. No UI available.</p></section>`;
         return;
       }
 
-      // Valid project → set state, show tabs
+      // Valid project → set state and show UI
       portalState.project = projectParam;
       projectSelect.value = projectParam;
       document.getElementById("tabs").style.display = "block";
