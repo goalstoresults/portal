@@ -22,7 +22,7 @@
   <main id="tab-content"></main>
 
   <footer>
-    <p>Portal Version: 1.1.4</p>
+    <p>Portal Version: 1.1.5</p>
   </footer>
 
   <script type="module">
@@ -41,7 +41,6 @@
       // Load project list
       const res = await fetch("/api/projects_config");
       const projects = await res.json().catch(() => []);
-      const validIds = projects.map(p => p.id);
       const projectSelect = document.getElementById("projectSelect");
 
       // Populate dropdown
@@ -52,12 +51,14 @@
         projectSelect.appendChild(opt);
       });
 
-      // Fallback to "gtr" only if no param
+      const validIds = projects.map(p => p.id);
+
+      // If no param, default to "gtr"
       if (!projectParam) {
         projectParam = "gtr";
       }
 
-      // Validate projectParam against dropdown
+      // Validate only if param exists
       if (!validIds.includes(projectParam)) {
         document.getElementById("tabs").style.display = "none";
         document.getElementById("tab-content").innerHTML =
