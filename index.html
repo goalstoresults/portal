@@ -1,16 +1,15 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title>Client Portal</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8" />
+  <title>Goals To Results Portal</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <header>
-    <h1 id="portal-title">Client Portal</h1>
+    <h1 id="portal-title">Goals To Results Portal</h1>
     <div id="project-selector-row">
-      <label for="project-selector">Project</label>
+      <label for="project-selector">Project:</label>
       <select id="project-selector"></select>
     </div>
   </header>
@@ -24,98 +23,84 @@
     <button data-tab="dashboard">Dashboard</button>
   </nav>
 
-  <!-- Subtabs (shown only when needed, e.g. Notes) -->
-  <nav id="subtabs" class="hidden"></nav>
+  <!-- Tab content container -->
+  <div id="tab-content"></div>
 
-  <!-- Main content area -->
-  <main id="content">
-    <div class="card"><p class="muted">Select a tab to start.</p></div>
-  </main>
+  <!-- Version section -->
+  <footer style="margin-top:20px; text-align:center; color:#666;">
+    <small>Portal Version: 1.0.0</small>
+  </footer>
 
-  <!-- JS loader + modules -->
   <script type="module">
-    import { loadPartial } from "./js/loader.js";
+    import { loadPartial } from "./loader.js";
+    import { initContacts } from "./contacts.js";
+    import { initNotes } from "./notes.js";
+    import { initTasks } from "./tasks.js";
+    import { initLookups } from "./lookups.js";
+    import { initDashboard } from "./dashboard.js";
 
-    // Example state (global portal variables)
     const portalState = {
-      project: null,
-      contactId: null,
-      contactName: null,
-      contactEmail: null,
-      contactType: null
+      project: "gtr",   // default until dropdown is wired
+      contactId: "",    // set when a contact is selected
     };
 
-    // Wire tab buttons
-    document.querySelectorAll("#tabs button").forEach(btn => {
-      btn.addEventListener("click", async () => {
-        const tab = btn.dataset.tab;
-        await loadTab(tab);
-      });
-    });
+    async function loadProjects() {
+      const sel = document.getElementById("project-selector");
+      try {
+        const res = await fetch("https://client-portal-api.dennis-e64.workers.dev/api/projects");
+        const projects = await res.json();
+        sel.innerHTML = projects
+          .map(p => `<option value="${p.project_id}">${p.project_name}</option>`)
+          .join("");
+        portalState.project = projects[0]?.project_id || "gtr";
 
-    async function loadTab(tab) {
-      const content = document.getElementById("content");
-      content.innerHTML = `<div class="card loader">Loading ${tab}...</div>`;
-
-      if (tab === "contacts") {
-        await loadPartial({
-          containerId: "content",
-          url: "./components/contacts.html",
-          vars: portalState,
-          afterLoad: async ({ container }) => {
-            const mod = await import("./js/contacts.js");
-            mod.initContacts({ container, portalState });
-          }
+        sel.addEventListener("change", () => {
+          portalState.project = sel.value;
+          const active = document.querySelector("#tabs button.primary")?.dataset.tab;
+          if (active) loadTab(active);
         });
-      }
-      else if (tab === "notes") {
-        await loadPartial({
-          containerId: "content",
-          url: "./components/notes.html",
-          vars: portalState,
-          afterLoad: async ({ container }) => {
-            const mod = await import("./js/notes.js");
-            mod.initNotes({ container, portalState });
-          }
-        });
-      }
-      else if (tab === "tasks") {
-        await loadPartial({
-          containerId: "content",
-          url: "./components/tasks.html",
-          vars: portalState,
-          afterLoad: async ({ container }) => {
-            const mod = await import("./js/tasks.js");
-            mod.initTasks({ container, portalState });
-          }
-        });
-      }
-      else if (tab === "lookups") {
-        await loadPartial({
-          containerId: "content",
-          url: "./components/lookups.html",
-          vars: portalState,
-          afterLoad: async ({ container }) => {
-            const mod = await import("./js/lookups.js");
-            mod.initLookups({ container, portalState });
-          }
-        });
-      }
-      else if (tab === "dashboard") {
-        await loadPartial({
-          containerId: "content",
-          url: "./components/dashboard.html",
-          vars: portalState,
-          afterLoad: async ({ container }) => {
-            const mod = await import("./js/dashboard.js");
-            mod.initDashboard({ container, portalState });
-          }
-        });
+      } catch (err) {
+        console.error("Failed to load projects", err);
+        sel.innerHTML = `<option disabled>Error loading projects</option>`;
       }
     }
 
-    // Bootstrap: auto-load first tab
-    document.querySelector("#tabs button[data-tab='contacts']").click();
+    async function loadTab(tab) {
+      const tabMap = {
+        contacts: { url: "contacts.html", afterLoad: initContacts },
+        notes:    { url: "notes.html",    afterLoad: initNotes },
+        tasks:    { url: "tasks.html",    afterLoad: initTasks },
+        lookups:  { url: "lookups.html",  afterLoad: initLookups },
+        dashboard:{ url: "dashboard.html",afterLoad: initDashboard },
+      };
+
+      const config = tabMap[tab];
+      if (!config) return;
+
+      // Highlight active tab
+      document.querySelectorAll("#tabs button").forEach(btn =>
+        btn.classList.toggle("primary", btn.dataset.tab === tab)
+      );
+
+      // Load partial and initialize
+      await loadPartial({
+        containerId: "tab-content",
+        url: config.url,
+        vars: portalState,
+        afterLoad: config.afterLoad,
+      });
+    }
+
+    // Wire up tab buttons
+    document.querySelectorAll("#tabs button").forEach(btn => {
+      btn.addEventListener("click", () => {
+        loadTab(btn.dataset.tab);
+      });
+    });
+
+    // Initial load
+    await loadProjects();
+    loadTab("contacts");
   </script>
 </body>
 </html>
