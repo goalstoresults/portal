@@ -2,93 +2,79 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Goals To Results Portal</title>
-  <link rel="stylesheet" href="/css/style.css" />
+  <title id="page-title">Client Portal</title>
+  <link rel="stylesheet" href="style.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
 </head>
 <body>
   <header>
-    <h1>Goals To Results Portal</h1>
-    <div id="project-select-container">
-      <label for="projectSelect">Project:</label>
-      <select id="projectSelect"></select>
+    <h1 id="portal-title">Client Portal</h1>
+    <div id="project-selector-row">
+      <label for="project-selector">Project:</label>
+      <select id="project-selector"></select>
     </div>
   </header>
 
-  <nav id="tabs" style="display:none;">
+  <nav id="tabs">
     <button data-tab="notes">Notes</button>
-    <!-- other tabs go here -->
   </nav>
 
-  <main id="tab-content"></main>
+  <div id="tab-content"></div>
 
-  <footer>
-    <p>Portal Version: 1.1.5</p>
+  <footer style="margin-top:20px; text-align:center; color:#666;">
+    <small>Portal Version: 1.1.0</small>
   </footer>
 
   <script type="module">
     import { loadNotesTab } from "./js/notes.js";
 
-    const portalState = {
-      project: null,
-      contactId: null,
-      selectedNoteId: null
-    };
+    const portalState = { project: "", contactId: "" };
+    const portalTitle = document.getElementById("portal-title");
+    const pageTitle = document.getElementById("page-title");
+    const projectSelector = document.getElementById("project-selector");
+    const tabContent = document.getElementById("tab-content");
 
-    async function init() {
-      const urlParams = new URLSearchParams(window.location.search);
-      let projectParam = urlParams.get("project");
+    async function loadProjects() {
+      try {
+        const res = await fetch("https://client-portal-api.dennis-e64.workers.dev/api/projects_config", { cache: "no-cache" });
+        const projects = await res.json();
+        if (!Array.isArray(projects) || projects.length === 0) throw new Error("No projects returned");
 
-      // Load project list
-      const res = await fetch("/api/projects_config");
-      const projects = await res.json().catch(() => []);
-      const projectSelect = document.getElementById("projectSelect");
+        projectSelector.innerHTML = projects.map(p => `<option value="${p.project}">${p.display_name}</option>`).join("");
+        portalState.project = projects[0].project;
 
-      // Populate dropdown
-      projects.forEach(p => {
-        const opt = document.createElement("option");
-        opt.value = p.id;
-        opt.textContent = p.name;
-        projectSelect.appendChild(opt);
-      });
+        const name = projects[0].display_name || "Client Portal";
+        portalTitle.textContent = name;
+        pageTitle.textContent = name;
 
-      const validIds = projects.map(p => p.id);
-
-      // If no param, default to "gtr"
-      if (!projectParam) {
-        projectParam = "gtr";
-      }
-
-      // Validate only if param exists
-      if (!validIds.includes(projectParam)) {
-        document.getElementById("tabs").style.display = "none";
-        document.getElementById("tab-content").innerHTML =
-          `<section class="card"><p>Invalid project specified. No UI available.</p></section>`;
-        return;
-      }
-
-      // Valid project → set state and show UI
-      portalState.project = projectParam;
-      projectSelect.value = projectParam;
-      document.getElementById("tabs").style.display = "block";
-
-      // Wire tab buttons
-      document.querySelectorAll("#tabs button").forEach(btn => {
-        btn.addEventListener("click", () => {
-          const tab = btn.dataset.tab;
-          if (tab === "notes") {
-            loadNotesTab({ portalState, tabContent: document.getElementById("tab-content") });
-          }
+        projectSelector.addEventListener("change", () => {
+          const selected = projectSelector.options[projectSelector.selectedIndex];
+          portalState.project = selected.value;
+          portalTitle.textContent = selected.text;
+          pageTitle.textContent = selected.text;
+          tabContent.innerHTML = "";
         });
-      });
-
-      // Handle dropdown change
-      projectSelect.addEventListener("change", () => {
-        portalState.project = projectSelect.value;
-        document.getElementById("tab-content").innerHTML = "";
-      });
+      } catch (err) {
+        console.error("Failed to load projects:", err);
+        projectSelector.innerHTML = `<option disabled>Error loading projects</option>`;
+      }
     }
 
-    init();
+    async function loadTab(tab) {
+      if (tab === "notes") {
+        document.querySelectorAll("#tabs button").forEach(btn =>
+          btn.classList.toggle("primary", btn.dataset.tab === tab)
+        );
+        tabContent.innerHTML = "";
+        await loadNotesTab({ portalState, tabContent });
+      }
+    }
+
+    document.querySelector("#tabs button[data-tab='notes']").addEventListener("click", () => loadTab("notes"));
+
+    window.addEventListener("DOMContentLoaded", async () => {
+      await loadProjects();
+    });
   </script>
 </body>
 </html>
