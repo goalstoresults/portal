@@ -1,0 +1,98 @@
+/* Global reset */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: system-ui, sans-serif;
+}
+
+body {
+  background: #f7f9fb;
+  color: #222;
+  line-height: 1.4;
+  padding: 20px;
+}
+
+/* Header */
+header {
+  margin-bottom: 20px;
+}
+header h1 {
+  margin-bottom: 8px;
+}
+#project-selector-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Tabs */
+nav#tabs, nav#subtabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+nav button {
+  padding: 6px 12px;
+  border: 1px solid #ccc;
+  background: #fff;
+  cursor: pointer;
+}
+nav button:hover {
+  background: #eee;
+}
+nav button.primary {
+  background: #4a90e2;
+  color: #fff;
+  border-color: #4a90e2;
+}
+
+/* Cards */
+.card {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+.card.stat {
+  flex: 1;
+  text-align: center;
+}
+.card.loader {
+  text-align: center;
+  font-style: italic;
+}
+
+/* Rows */
+.row {
+  display: flex;
+  align-items: center;
+}
+.spacer {
+  flex: 1;
+}
+
+/* Muted text */
+.muted {
+  color: #666;
+  font-size: 0.9em;
+}
+
+/* Inputs */
+input, textarea, select {
+  padding: 6px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+}
+button {
+  padding: 6px 12px;
+  border-radius: 3px;
+}
+
+/* Zebra striping for lists */
+#contactsResults .card:nth-child(even),
+#tasksList .card:nth-child(even),
+#notesContent .card:nth-child(even) {
+  background: #f9f9f9;
+}
