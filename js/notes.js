@@ -1,15 +1,15 @@
-// notes.js v1.1.4
-// Change: Do not auto-render the Add subtab. Subtab area stays blank until a button is clicked.
+// notes.js v1.1.5
+// Notes tab module with consistent button styling and version marker in title
 
 export async function loadNotesTab({ portalState, tabContent }) {
   tabContent.innerHTML = `
     <section class="card">
-      <h2>Notes (v1.1.4)</h2>
+      <h2>Notes (v1.1.5)</h2>
       <div class="tabs">
-        <button id="tabAdd">Add</button>
-        <button id="tabHistory">History</button>
-        <button id="tabReview">Review</button>
-        <button id="tabRelationships">Relationships</button>
+        <button id="tabAdd" class="btn">Add</button>
+        <button id="tabHistory" class="btn">History</button>
+        <button id="tabReview" class="btn">Review</button>
+        <button id="tabRelationships" class="btn">Relationships</button>
       </div>
       <div id="notesSubtab" style="min-height: 60px;"></div>
     </section>
@@ -20,11 +20,12 @@ export async function loadNotesTab({ portalState, tabContent }) {
   // Utility to mark active tab button
   function setActive(tabId) {
     document.querySelectorAll(".tabs button").forEach(btn => {
-      btn.classList.toggle("primary", btn.id === tabId);
+      btn.classList.remove("primary");
+      if (btn.id === tabId) btn.classList.add("primary");
     });
   }
 
-  // Wire subtabs (no default render)
+  // Wire subtabs (no default render, blank until clicked)
   document.getElementById("tabAdd").addEventListener("click", () => {
     setActive("tabAdd");
     renderAdd(notesSubtab, portalState);
@@ -56,7 +57,7 @@ function renderAdd(container, portalState) {
   container.innerHTML = `
     <h3>Add Note</h3>
     <textarea id="noteContent" rows="8" style="width:100%;"></textarea>
-    <button id="btnSaveNote">Save</button>
+    <button id="btnSaveNote" class="btn primary">Save</button>
     <div id="noteAddResult" style="margin-top:10px; color:#900;"></div>
   `;
 
