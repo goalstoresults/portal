@@ -22,7 +22,7 @@
   <div id="tab-content"></div>
 
   <footer style="margin-top:20px; text-align:center; color:#666;">
-    <small>Portal Version: 1.0.9</small>
+    <small>Portal Version: 1.0.10</small>
   </footer>
 
   <script>
@@ -200,13 +200,27 @@
       }
 
       async function loadTab(tab) {
-        if (tab !== "notes") return;
-        document.querySelectorAll("#tabs button").forEach(btn =>
-          btn.classList.toggle("primary", btn.dataset.tab === tab)
-        );
-        await loadPartial("notes.html");
-        initNotes();
-      }
+  if (tab !== "notes") return;
+
+  // ✅ If already active, skip reload
+  const activeTab = document.querySelector("#tabs button.primary");
+  if (activeTab && activeTab.dataset.tab === tab) {
+    return;
+  }
+
+  // Highlight active tab
+  document.querySelectorAll("#tabs button").forEach(btn =>
+    btn.classList.toggle("primary", btn.dataset.tab === tab)
+  );
+
+  // ✅ Clear previous content before injecting
+  tabContent.innerHTML = "";
+
+  // Load partial and initialize Notes
+  await loadPartial("notes.html");
+  initNotes();
+}
+
 
       document.querySelector("#tabs button[data-tab='notes']").addEventListener("click", () => loadTab("notes"));
 
