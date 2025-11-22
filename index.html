@@ -24,10 +24,9 @@
 
   <!-- Version -->
   <footer style="margin-top:20px; text-align:center; color:#666;">
-    <small>Portal Version: 1.0.4</small>
+    <small>Portal Version: 1.0.5</small>
   </footer>
 
-  <!-- Inline script (no module imports, avoids MIME issues) -->
   <script>
     const portalState = { project: "", contactId: "" };
     const portalTitle = document.getElementById("portal-title");
@@ -35,7 +34,7 @@
     const projectSelector = document.getElementById("project-selector");
     const tabContent = document.getElementById("tab-content");
 
-    // Load projects from Worker
+    // Load projects
     async function loadProjects() {
       try {
         const res = await fetch("https://client-portal-api.dennis-e64.workers.dev/api/projects_config");
@@ -62,7 +61,7 @@
       }
     }
 
-    // Minimal partial loader
+    // Load partial
     async function loadPartial(url) {
       try {
         const res = await fetch(url, { cache: "no-cache" });
@@ -74,15 +73,11 @@
       }
     }
 
-    // Notes init (inline)
+    // Notes init
     function initNotes() {
       const container = document.getElementById("notesContent");
       const subtabs = document.querySelectorAll("#notes-subtabs button");
-
-      subtabs.forEach(btn => {
-        btn.addEventListener("click", () => loadNotesSubtab(btn.dataset.subtab));
-      });
-
+      subtabs.forEach(btn => btn.addEventListener("click", () => loadNotesSubtab(btn.dataset.subtab)));
       loadNotesSubtab("history");
     }
 
@@ -90,6 +85,30 @@
       const container = document.getElementById("notesContent");
       if (!container) return;
       container.innerHTML = `<p>Loading ${subtab}...</p>`;
+
+      if (subtab === "history") {
+        try {
+          const url = `https://client-portal-api.dennis-e64.workers.dev/api/notes?project=${encodeURIComponent(portalState.project)}&contact_id=${encodeURIComponent(portalState.contactId || "")}`;
+          const res = await fetch(url);
+          const data = await res.json();
+          if (!data.success) {
+            container.innerHTML = `<p>No notes found.</p>`;
+            return;
+          }
+          container.innerHTML = "<h4>Notes History</h4>";
+          const list = document.createElement("ul");
+          (data.notes || []).forEach(n => {
+            const li = document.createElement("li");
+            const date = n.created_at ? new Date(n.created_at).toLocaleString() : "(no date)";
+            li.textContent = `${date}: ${n.note_text || ""}`;
+            list.appendChild(li);
+          });
+          container.appendChild(list);
+        } catch (err) {
+          container.innerHTML = `<p>Error loading history: ${err.message}</p>`;
+        }
+        return;
+      }
 
       if (subtab === "add") {
         container.innerHTML = `
@@ -120,30 +139,6 @@
             document.getElementById("noteAddResult").textContent = `Error: ${err.message}`;
           }
         });
-        return;
-      }
-
-      if (subtab === "history") {
-        try {
-          const url = `https://client-portal-api.dennis-e64.workers.dev/api/notes?project=${encodeURIComponent(portalState.project)}&contact_id=${encodeURIComponent(portalState.contactId || "")}`;
-          const res = await fetch(url);
-          const data = await res.json();
-          if (!data.success) {
-            container.innerHTML = `<p>No notes found.</p>`;
-            return;
-          }
-          container.innerHTML = "<h4>Notes History</h4>";
-          const list = document.createElement("ul");
-          (data.notes || []).forEach(n => {
-            const li = document.createElement("li");
-            const date = n.created_at ? new Date(n.created_at).toLocaleString() : "(no date)";
-            li.textContent = `${date}: ${n.note_text || ""}`;
-            list.appendChild(li);
-          });
-          container.appendChild(list);
-        } catch (err) {
-          container.innerHTML = `<p>Error loading history: ${err.message}</p>`;
-        }
         return;
       }
 
@@ -198,35 +193,4 @@
               result.textContent = `Error: ${data.error || "Unknown error"}`;
             }
           } catch (err) {
-            document.getElementById("relResult").textContent = `Error: ${err.message}`;
-          }
-        });
-        return;
-      }
-
-      container.innerHTML = `<p>Unknown subtab</p>`;
-    }
-
-    // Tab orchestration
-    async function loadTab(tab) {
-      if (tab !== "notes") return;
-      // Highlight active
-      document.querySelectorAll("#tabs button").forEach(btn =>
-        btn.classList.toggle("primary", btn.dataset.tab === tab)
-      );
-      // Load partial then init
-      await loadPartial("notes.html");
-      initNotes();
-    }
-
-    // Wire tab click
-    document.querySelector("#tabs button[data-tab='notes']").addEventListener("click", () => loadTab("notes"));
-
-    // Boot
-    (async function boot() {
-      await loadProjects();
-      loadTab("notes");
-    })();
-  </script>
-</body>
-</html>
+            document.getElementById("relResult").textContent = `Error: ${
