@@ -1,11 +1,32 @@
-// notes.js v1.0.8
-export function initNotes(portalState) {
+// js/notes.js v1.1.0
+export async function loadNotesTab({ portalState, tabContent }) {
+  // Load the Notes partial
+  await loadPartial("/components/notes.html", tabContent);
+
+  // Initialize Notes subtabs
+  initNotes(portalState);
+}
+
+// --- Internal helpers ---
+
+async function loadPartial(url, tabContent) {
+  try {
+    const res = await fetch(url, { cache: "no-cache" });
+    if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+    const html = await res.text();
+    tabContent.innerHTML = html;
+  } catch (err) {
+    tabContent.innerHTML = `<section class="card"><p>Error loading partial (${url}): ${err.message}</p></section>`;
+  }
+}
+
+function initNotes(portalState) {
   const container = document.getElementById("notesContent");
   const subtabs = document.querySelectorAll("#notes-subtabs button");
 
-  subtabs.forEach(btn => {
-    btn.addEventListener("click", () => loadNotesSubtab(btn.dataset.subtab, portalState));
-  });
+  subtabs.forEach(btn =>
+    btn.addEventListener("click", () => loadNotesSubtab(btn.dataset.subtab, portalState))
+  );
 
   // Default view
   loadNotesSubtab("history", portalState);
