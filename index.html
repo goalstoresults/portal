@@ -14,17 +14,30 @@
     </div>
   </header>
 
+  <!-- Tabs -->
+  <nav id="tabs">
+    <button data-tab="notes">Notes</button>
+  </nav>
+
+  <!-- Tab content -->
+  <div id="tab-content"></div>
+
   <!-- Version -->
   <footer style="margin-top:20px; text-align:center; color:#666;">
-    <small>Portal Version: 1.0.1</small>
+    <small>Portal Version: 1.0.3</small>
   </footer>
 
-  <script>
-    const portalTitle = document.getElementById("portal-title");
-    const pageTitle = document.getElementById("page-title");
-    const projectSelector = document.getElementById("project-selector");
+  <script type="module">
+    import { loadPartial } from "./loader.js";
+    import { initNotes } from "./notes.js";
+
+    const portalState = {
+      project: "",
+      contactId: "",
+    };
 
     async function loadProjects() {
+      const sel = document.getElementById("project-selector");
       try {
         const res = await fetch("https://client-portal-api.dennis-e64.workers.dev/api/projects_config");
         const projects = await res.json();
@@ -33,29 +46,50 @@
           throw new Error("No projects returned");
         }
 
-        // Populate dropdown with project + display_name
-        projectSelector.innerHTML = projects
+        sel.innerHTML = projects
           .map(p => `<option value="${p.project}">${p.display_name}</option>`)
           .join("");
 
-        // Set initial title
-        const firstName = projects[0]?.display_name || "Client Portal";
-        portalTitle.textContent = firstName;
-        pageTitle.textContent = firstName;
+        portalState.project = projects[0].project;
 
-        // Update title on change
-        projectSelector.addEventListener("change", () => {
-          const selectedName = projectSelector.options[projectSelector.selectedIndex].text;
-          portalTitle.textContent = selectedName;
-          pageTitle.textContent = selectedName;
+        const name = projects[0].display_name;
+        document.getElementById("portal-title").textContent = name;
+        document.getElementById("page-title").textContent = name;
+
+        sel.addEventListener("change", () => {
+          const selected = sel.options[sel.selectedIndex];
+          portalState.project = selected.value;
+          document.getElementById("portal-title").textContent = selected.text;
+          document.getElementById("page-title").textContent = selected.text;
+          loadTab("notes");
         });
       } catch (err) {
         console.error("Failed to load projects", err);
-        projectSelector.innerHTML = `<option disabled>Error loading projects</option>`;
+        sel.innerHTML = `<option disabled>Error loading projects</option>`;
       }
     }
 
-    loadProjects();
+    async function loadTab(tab) {
+      if (tab !== "notes") return;
+
+      document.querySelectorAll("#tabs button").forEach(btn =>
+        btn.classList.toggle("primary", btn.dataset.tab === tab)
+      );
+
+      await loadPartial({
+        containerId: "tab-content",
+        url: "notes.html",
+        vars: portalState,
+        afterLoad: initNotes,
+      });
+    }
+
+    document.querySelector("#tabs button[data-tab='notes']").addEventListener("click", () => {
+      loadTab("notes");
+    });
+
+    await loadProjects();
+    loadTab("notes");
   </script>
 </body>
 </html>
